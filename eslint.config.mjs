@@ -20,12 +20,25 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
 
-      // Import rules
+      // Import rules - enforce top-level ES module imports only
       'import-x/no-commonjs': 'error',
+      'import-x/no-dynamic-require': 'error',
+      'import-x/no-amd': 'error',
+      'import-x/no-import-module-exports': 'error',
+      '@typescript-eslint/no-require-imports': 'error',
 
       // General rules
       'no-console': 'error',
       'prefer-const': 'error',
+      
+      // Ban dynamic imports - only top-level import declarations allowed
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression',
+          message: 'Dynamic imports are not allowed. Use top-level import declarations only.'
+        }
+      ],
     },
   },
   {
