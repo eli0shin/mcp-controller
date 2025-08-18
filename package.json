@@ -7,6 +7,12 @@
   "bin": {
     "mcp-controller": "./mcp-controller"
   },
+  "files": [
+    "README.md",
+    "package.json",
+    "bun.lock",
+    "mcp-controller"
+  ],
   "scripts": {
     "build": "bun build src/cli.ts --compile --outfile mcp-controller",
     "dev": "bun run src/cli.ts",
