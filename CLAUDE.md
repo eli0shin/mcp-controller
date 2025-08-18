@@ -1,6 +1,6 @@
-# MCP Proxy Testing Standards
+# MCP Controller Testing Standards
 
-This document outlines the testing standards and patterns established for the MCP Proxy project. All new tests must follow these conventions to maintain consistency and reliability.
+This document outlines the testing standards and patterns established for the MCP Controller project. All new tests must follow these conventions to maintain consistency and reliability.
 
 ## Core Testing Principles
 
@@ -64,7 +64,7 @@ expect(validatedResponse).toEqual({ /* complete expected structure */ });
 
 ### 3. Integration Test Architecture
 - Use real MCP servers, not mocks
-- Test full end-to-end scenarios through the proxy
+- Test full end-to-end scenarios through the controller
 - Include command line argument passing tests
 - Test both success and error scenarios with complete response validation
 
@@ -183,7 +183,7 @@ When testing command line argument passing:
 ```typescript
 // In beforeAll
 process = Bun.spawn([
-  'proxy-command',
+  'controller-command',
   'target-command', 'target-args',
   'pos-arg-1', 'pos-arg-2',
   '--named-1', 'named-value-1',
@@ -208,8 +208,8 @@ expect(validatedResponse).toEqual({
 - Use descriptive test names that explain the complete behavior
 - Follow pattern: `should [action] [expected outcome] [context]`
 - Examples:
-  - `should initialize MCP connection through proxy`
-  - `should pass command line arguments through proxy to target server`
+  - `should initialize MCP connection through controller`
+  - `should pass command line arguments through controller to target server`
   - `should handle invalid tool calls with complete error response`
 
 ## Required Test Coverage

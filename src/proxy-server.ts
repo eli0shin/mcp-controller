@@ -18,7 +18,7 @@ export class McpProxyServer {
     // Set up stdin/stdout proxying
     this.setupStdioProxy();
     
-    process.stderr.write('MCP Proxy Server started\n');
+    process.stderr.write('MCP Controller started\n');
   }
 
   private setupStdioProxy(): void {

@@ -2,12 +2,12 @@ import { test, expect, describe } from 'bun:test';
 import path from 'path';
 
 describe('CLI Argument Validation Tests', () => {
-  const proxyExecutable = path.resolve('./mcp-proxy');
+  const controllerExecutable = path.resolve('./mcp-controller');
   const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
 
   test('should reject when both --enabled-tools and --disabled-tools are provided', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--enabled-tools', 'add',
       '--disabled-tools', 'get-args',
       'bun', 'run', fixtureServerPath
@@ -29,7 +29,7 @@ describe('CLI Argument Validation Tests', () => {
 
   test('should reject when --enabled-tools is provided without value', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--enabled-tools'
     ], {
       stdin: 'pipe',
@@ -49,7 +49,7 @@ describe('CLI Argument Validation Tests', () => {
 
   test('should reject when --disabled-tools is provided without value', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--disabled-tools'
     ], {
       stdin: 'pipe',
@@ -69,7 +69,7 @@ describe('CLI Argument Validation Tests', () => {
 
   test('should reject when no target command is provided', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--enabled-tools', 'add'
     ], {
       stdin: 'pipe',
@@ -89,7 +89,7 @@ describe('CLI Argument Validation Tests', () => {
 
   test('should accept valid --enabled-tools argument', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--enabled-tools', 'add,get-args',
       'echo', 'test'
     ], {
@@ -113,7 +113,7 @@ describe('CLI Argument Validation Tests', () => {
 
   test('should accept valid --disabled-tools argument', async () => {
     const process = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       '--disabled-tools', 'dangerous-tool',
       'echo', 'test'
     ], {

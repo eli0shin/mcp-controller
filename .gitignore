@@ -3,7 +3,7 @@ node_modules/
 bun.lockb
 
 # Build output
-mcp-proxy
+mcp-controller
 
 # TypeScript
 *.tsbuildinfo

@@ -1,4 +1,4 @@
-# MCP Proxy
+# MCP Controller
 
 A Model Context Protocol (MCP) server that acts as a proxy between MCP clients and target MCP servers, with **tool filtering** capabilities to control which tools are exposed to clients.
 
@@ -25,13 +25,13 @@ bun run build
 
 ```bash
 # Proxy to a local MCP server
-./mcp-proxy bun run my-server.ts
+./mcp-controller bun run my-server.ts
 
 # Proxy to a Python MCP server
-./mcp-proxy python -m my_mcp_server
+./mcp-controller python -m my_mcp_server
 
 # Proxy to any executable MCP server
-./mcp-proxy node server.js --port 3000
+./mcp-controller node server.js --port 3000
 ```
 
 ### Tool Filtering
@@ -40,13 +40,13 @@ Control which tools from the target server are exposed to clients:
 
 ```bash
 # Only allow specific tools (whitelist mode)
-./mcp-proxy --enabled-tools file-read,file-write,search bun run my-server.ts
+./mcp-controller --enabled-tools file-read,file-write,search bun run my-server.ts
 
 # Block specific tools (blacklist mode)  
-./mcp-proxy --disabled-tools dangerous-tool,admin-commands python -m my_server
+./mcp-controller --disabled-tools dangerous-tool,admin-commands python -m my_server
 
 # Multiple tools (comma-separated, no spaces around commas)
-./mcp-proxy --enabled-tools tool1,tool2,tool3 node server.js
+./mcp-controller --enabled-tools tool1,tool2,tool3 node server.js
 ```
 
 ### Filtering Rules
@@ -62,28 +62,28 @@ Control which tools from the target server are exposed to clients:
 ### Security & Access Control
 ```bash
 # Production environment - only allow safe read-only tools
-./mcp-proxy --enabled-tools read-file,search,list-files my-server
+./mcp-controller --enabled-tools read-file,search,list-files my-server
 
 # Development environment - block dangerous operations
-./mcp-proxy --disabled-tools delete-file,format-disk,restart-system my-server
+./mcp-controller --disabled-tools delete-file,format-disk,restart-system my-server
 ```
 
 ### Client-Specific Customization
 ```bash
 # For a documentation client - only text processing tools
-./mcp-proxy --enabled-tools text-search,summarize,translate content-server
+./mcp-controller --enabled-tools text-search,summarize,translate content-server
 
 # For an admin interface - block user-facing tools  
-./mcp-proxy --disabled-tools user-chat,send-email,post-social admin-server
+./mcp-controller --disabled-tools user-chat,send-email,post-social admin-server
 ```
 
 ### Testing & Development
 ```bash
 # Test specific functionality by isolating tools
-./mcp-proxy --enabled-tools database-query,cache-get test-server
+./mcp-controller --enabled-tools database-query,cache-get test-server
 
 # Debug by excluding problematic tools
-./mcp-proxy --disabled-tools flaky-api,slow-process debug-server
+./mcp-controller --disabled-tools flaky-api,slow-process debug-server
 ```
 
 ## How it Works
@@ -97,14 +97,14 @@ Control which tools from the target server are exposed to clients:
 ## Architecture
 
 ```
-MCP Client ↔ MCP Proxy Server ↔ Target MCP Server
-              (Tool Filtering)
+MCP Client ↔ MCP Controller ↔ Target MCP Server
+             (Tool Filtering)
 ```
 
 ### Message Flow
 
-1. **Client → Proxy → Target**: All requests forwarded transparently
-2. **Target → Proxy → Client**: 
+1. **Client → Controller → Target**: All requests forwarded transparently
+2. **Target → Controller → Client**: 
    - `tools/list` responses are filtered based on configuration
    - All other responses pass through unchanged
 
@@ -119,33 +119,33 @@ MCP Client ↔ MCP Proxy Server ↔ Target MCP Server
 ## CLI Reference
 
 ```bash
-Usage: mcp-proxy [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]
+Usage: mcp-controller [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]
 
 Options:
   --enabled-tools <tools>    Comma-separated list of tools to allow (whitelist mode)
   --disabled-tools <tools>   Comma-separated list of tools to block (blacklist mode)
 
 Examples:
-  mcp-proxy bun run server.ts                              # No filtering
-  mcp-proxy --enabled-tools read,write bun run server.ts   # Only allow read,write
-  mcp-proxy --disabled-tools delete python -m server       # Block delete tool
+  mcp-controller bun run server.ts                              # No filtering
+  mcp-controller --enabled-tools read,write bun run server.ts   # Only allow read,write
+  mcp-controller --disabled-tools delete python -m server       # Block delete tool
 ```
 
 ## Error Handling
 
-The proxy validates arguments at startup and will exit with helpful error messages:
+The controller validates arguments at startup and will exit with helpful error messages:
 
 ```bash
 # Missing command
-$ ./mcp-proxy --enabled-tools read
+$ ./mcp-controller --enabled-tools read
 Error: No target command specified
 
 # Both filtering modes
-$ ./mcp-proxy --enabled-tools read --disabled-tools write bun server.ts  
+$ ./mcp-controller --enabled-tools read --disabled-tools write bun server.ts  
 Error: --enabled-tools and --disabled-tools are mutually exclusive
 
 # Missing tool list
-$ ./mcp-proxy --enabled-tools bun server.ts
+$ ./mcp-controller --enabled-tools bun server.ts
 Error: --enabled-tools requires a value
 ```
 

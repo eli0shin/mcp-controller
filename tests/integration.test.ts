@@ -66,13 +66,13 @@ describe('MCP Proxy Integration Tests', () => {
   let proxyProcess: Bun.Subprocess;
   
   const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
-  const proxyExecutable = path.resolve('./mcp-proxy');
+  const controllerExecutable = path.resolve('./mcp-controller');
   
   beforeAll(async () => {
     // Start proxy executable as a subprocess so we can communicate with it via stdio
     // Pass test arguments to the fixture server (both positional and named)
     proxyProcess = Bun.spawn([
-      proxyExecutable,
+      controllerExecutable,
       'bun', 'run', fixtureServerPath, 
       'test-arg-1', 'test-arg-2', 
       '--named-1', 'test-named-1-value', 
@@ -633,7 +633,7 @@ describe('MCP Proxy Tool Filtering Tests', () => {
   let proxyProcess: Bun.Subprocess;
   
   const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
-  const proxyExecutable = path.resolve('./mcp-proxy');
+  const controllerExecutable = path.resolve('./mcp-controller');
   
   afterAll(async () => {
     if (proxyProcess) {
@@ -695,7 +695,7 @@ describe('MCP Proxy Tool Filtering Tests', () => {
     beforeAll(async () => {
       // Start proxy with only 'add' tool enabled
       proxyProcess = Bun.spawn([
-        proxyExecutable,
+        controllerExecutable,
         '--enabled-tools', 'add',
         'bun', 'run', fixtureServerPath
       ], {
@@ -768,7 +768,7 @@ describe('MCP Proxy Tool Filtering Tests', () => {
     beforeAll(async () => {
       // Start proxy with 'get-args' tool disabled
       proxyProcess = Bun.spawn([
-        proxyExecutable,
+        controllerExecutable,
         '--disabled-tools', 'get-args',
         'bun', 'run', fixtureServerPath
       ], {

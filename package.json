@@ -1,14 +1,14 @@
 {
-  "name": "mcp-proxy",
+  "name": "mcp-controller",
   "version": "0.1.0",
   "description": "MCP server proxy that forwards JSON RPC communication between MCP clients and target servers",
   "type": "module",
   "main": "src/cli.ts",
   "bin": {
-    "mcp-proxy": "./mcp-proxy"
+    "mcp-controller": "./mcp-controller"
   },
   "scripts": {
-    "build": "bun build src/cli.ts --compile --outfile mcp-proxy",
+    "build": "bun build src/cli.ts --compile --outfile mcp-controller",
     "dev": "bun run src/cli.ts",
     "typecheck": "bun --bun tsc --noEmit",
     "lint": "eslint .",

@@ -7,9 +7,9 @@ function parseArguments(): ProxyConfig {
   const args = process.argv.slice(2);
   
   if (args.length === 0) {
-    process.stderr.write('Usage: mcp-proxy [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]\n');
-    process.stderr.write('Example: mcp-proxy --enabled-tools add,subtract bun run server.ts\n');
-    process.stderr.write('Example: mcp-proxy --disabled-tools dangerous-tool bun run server.ts\n');
+    process.stderr.write('Usage: mcp-controller [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]\n');
+    process.stderr.write('Example: mcp-controller --enabled-tools add,subtract bun run server.ts\n');
+    process.stderr.write('Example: mcp-controller --disabled-tools dangerous-tool bun run server.ts\n');
     process.exit(1);
   }
 
@@ -56,7 +56,7 @@ function parseArguments(): ProxyConfig {
     targetCommand,
     enabledTools,
     disabledTools,
-    serverName: 'mcp-proxy',
+    serverName: 'mcp-controller',
     serverVersion: '0.1.0',
   };
 }
@@ -69,13 +69,13 @@ async function main(): Promise<void> {
     
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
-      process.stderr.write('\nShutting down proxy server...\n');
+      process.stderr.write('\nShutting down controller...\n');
       await proxyServer.stop();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      process.stderr.write('\nShutting down proxy server...\n');
+      process.stderr.write('\nShutting down controller...\n');
       await proxyServer.stop();
       process.exit(0);
     });

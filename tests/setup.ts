@@ -2,7 +2,7 @@ import { beforeAll } from 'bun:test';
 
 beforeAll(async () => {
   // Build the executable before running tests
-  console.log('Building mcp-proxy executable...');
+  console.log('Building mcp-controller executable...');
   
   const buildProcess = Bun.spawn(['bun', 'run', 'build'], {
     stdout: 'inherit',
