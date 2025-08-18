@@ -101,6 +101,27 @@ server.registerResource(
   })
 );
 
+// Add a prompt for generating greetings
+server.registerPrompt(
+  'generate-greeting',
+  {
+    title: 'Greeting Generator',
+    description: 'Generate a personalized greeting message',
+    argsSchema: { name: z.string() },
+  },
+  async ({ name }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Generate a friendly greeting message for someone named ${name}.`,
+        },
+      },
+    ],
+  })
+);
+
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
 await server.connect(transport);

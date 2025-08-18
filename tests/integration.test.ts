@@ -1,6 +1,16 @@
 import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
 import path from 'path';
-import { z } from 'zod';
+import {
+  JSONRPCResponseSchema,
+  JSONRPCErrorSchema,
+  InitializeResultSchema,
+  ListToolsResultSchema,
+  CallToolResultSchema,
+  ListResourcesResultSchema,
+  ReadResourceResultSchema,
+  ListPromptsResultSchema,
+  GetPromptResultSchema
+} from '@modelcontextprotocol/sdk/types.js';
 
 type JsonRpcMessage = {
   jsonrpc: string;
@@ -20,76 +30,36 @@ type JsonRpcResponse = {
   };
 };
 
-// Complete response schemas for full validation
-const InitializeResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  result: z.object({
-    protocolVersion: z.string(),
-    serverInfo: z.object({
-      name: z.string(),
-      version: z.string(),
-    }),
-    capabilities: z.record(z.unknown()),
-  }),
+// Complete response schemas using MCP SDK types
+const InitializeResponseSchema = JSONRPCResponseSchema.extend({
+  result: InitializeResultSchema
 });
 
-const ToolsListResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  result: z.object({
-    tools: z.array(z.object({
-      name: z.string(),
-      description: z.string(),
-      inputSchema: z.record(z.unknown()),
-    })),
-  }),
+const ToolsListResponseSchema = JSONRPCResponseSchema.extend({
+  result: ListToolsResultSchema
 });
 
-const ToolCallResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  result: z.object({
-    content: z.array(z.object({
-      type: z.string(),
-      text: z.string(),
-    })),
-  }),
+const ToolCallResponseSchema = JSONRPCResponseSchema.extend({
+  result: CallToolResultSchema
 });
 
-const ResourcesListResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  result: z.object({
-    resources: z.array(z.object({
-      name: z.string(),
-      description: z.string(),
-      uri: z.string().optional(),
-      uriTemplate: z.string().optional(),
-    })),
-  }),
+const ResourcesListResponseSchema = JSONRPCResponseSchema.extend({
+  result: ListResourcesResultSchema
 });
 
-const ResourceReadResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  result: z.object({
-    contents: z.array(z.object({
-      uri: z.string(),
-      text: z.string(),
-    })),
-  }),
+const ResourceReadResponseSchema = JSONRPCResponseSchema.extend({
+  result: ReadResourceResultSchema
 });
 
-const ErrorResponseSchema = z.object({
-  jsonrpc: z.literal('2.0'),
-  id: z.number(),
-  error: z.object({
-    code: z.number(),
-    message: z.string(),
-    data: z.unknown().optional(),
-  }),
+const PromptsListResponseSchema = JSONRPCResponseSchema.extend({
+  result: ListPromptsResultSchema
 });
+
+const PromptGetResponseSchema = JSONRPCResponseSchema.extend({
+  result: GetPromptResultSchema
+});
+
+const ErrorResponseSchema = JSONRPCErrorSchema;
 
 
 describe('MCP Proxy Integration Tests', () => {
@@ -206,6 +176,9 @@ describe('MCP Proxy Integration Tests', () => {
         },
         capabilities: {
           completions: {},
+          prompts: {
+            listChanged: true,
+          },
           resources: {
             listChanged: true,
           },
@@ -251,6 +224,7 @@ describe('MCP Proxy Integration Tests', () => {
         tools: [
           {
             name: 'add',
+            title: 'Addition Tool',
             description: 'Add two numbers',
             inputSchema: {
               $schema: 'http://json-schema.org/draft-07/schema#',
@@ -269,6 +243,7 @@ describe('MCP Proxy Integration Tests', () => {
           },
           {
             name: 'get-args',
+            title: 'Get Arguments Tool',
             description: 'Returns the command line arguments passed to the server',
             inputSchema: {
               $schema: 'http://json-schema.org/draft-07/schema#',
@@ -361,6 +336,7 @@ describe('MCP Proxy Integration Tests', () => {
         resources: [
           {
             name: 'static-greeting',
+            title: 'Static Greeting',
             description: 'A static greeting message',
             uri: 'greeting://static',
           },
@@ -572,6 +548,9 @@ describe('MCP Proxy Integration Tests', () => {
         },
         capabilities: {
           completions: {},
+          prompts: {
+            listChanged: true,
+          },
           resources: {
             listChanged: true,
           },
@@ -580,6 +559,281 @@ describe('MCP Proxy Integration Tests', () => {
           },
         },
       },
+    });
+  });
+
+  test('should list prompts through proxy', async () => {
+    const promptsRequest = {
+      jsonrpc: '2.0',
+      id: 14,
+      method: 'prompts/list',
+    };
+
+    const response = await sendJsonRpcMessage(promptsRequest);
+    
+    // Validate entire response structure
+    const validatedResponse = PromptsListResponseSchema.parse(response);
+    expect(validatedResponse).toEqual({
+      jsonrpc: '2.0',
+      id: 14,
+      result: {
+        prompts: [
+          {
+            name: 'generate-greeting',
+            title: 'Greeting Generator',
+            description: 'Generate a personalized greeting message',
+            arguments: [
+              {
+                name: 'name',
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  test('should get prompt with arguments through proxy', async () => {
+    const promptGetRequest = {
+      jsonrpc: '2.0',
+      id: 15,
+      method: 'prompts/get',
+      params: {
+        name: 'generate-greeting',
+        arguments: {
+          name: 'Alice',
+        },
+      },
+    };
+
+    const response = await sendJsonRpcMessage(promptGetRequest);
+    
+    // Validate entire response structure
+    const validatedResponse = PromptGetResponseSchema.parse(response);
+    expect(validatedResponse).toEqual({
+      jsonrpc: '2.0',
+      id: 15,
+      result: {
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: 'Generate a friendly greeting message for someone named Alice.',
+            },
+          },
+        ],
+      },
+    });
+  });
+});
+
+describe('MCP Proxy Tool Filtering Tests', () => {
+  let proxyProcess: Bun.Subprocess;
+  
+  const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
+  const proxyExecutable = path.resolve('./mcp-proxy');
+  
+  afterAll(async () => {
+    if (proxyProcess) {
+      proxyProcess.kill();
+      await proxyProcess.exited;
+    }
+  });
+
+  // Helper function to send JSON-RPC message and get response
+  async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
+    const messageStr = JSON.stringify(message) + '\n';
+    
+    // Type guard to ensure stdin is available
+    if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
+      throw new Error('Process stdin is not available');
+    }
+    
+    // Write to stdin (FileSink in Bun)
+    proxyProcess.stdin.write(messageStr);
+    
+    // Type guard to ensure stdout is a ReadableStream
+    if (!proxyProcess.stdout || typeof proxyProcess.stdout === 'number') {
+      throw new Error('Process stdout is not available');
+    }
+    
+    // Read response from stdout
+    const reader = proxyProcess.stdout.getReader();
+    const { value } = await reader.read();
+    reader.releaseLock();
+    
+    if (value) {
+      const responseStr = new TextDecoder().decode(value);
+      const lines = responseStr.trim().split('\n');
+      // Return the last JSON line (ignore any debug output)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          return JSON.parse(lines[i]) as JsonRpcResponse;
+        } catch {
+          continue;
+        }
+      }
+    }
+    
+    throw new Error('No valid JSON response received');
+  }
+
+  // Helper function to send notification (no response expected)
+  async function sendNotification(message: JsonRpcMessage): Promise<void> {
+    const messageStr = JSON.stringify(message) + '\n';
+    
+    if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
+      throw new Error('Process stdin is not available');
+    }
+    
+    proxyProcess.stdin.write(messageStr);
+  }
+
+  describe('enabled tools filtering', () => {
+    beforeAll(async () => {
+      // Start proxy with only 'add' tool enabled
+      proxyProcess = Bun.spawn([
+        proxyExecutable,
+        '--enabled-tools', 'add',
+        'bun', 'run', fixtureServerPath
+      ], {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      
+      // Give the proxy time to start
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Initialize the connection
+      const initRequest = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: { tools: {}, resources: {} },
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      };
+      await sendJsonRpcMessage(initRequest);
+      
+      const initNotification = {
+        jsonrpc: '2.0',
+        method: 'initialized',
+      };
+      await sendNotification(initNotification);
+    });
+
+    test('should only return enabled tools in tools/list response', async () => {
+      const toolsRequest = {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+      };
+
+      const response = await sendJsonRpcMessage(toolsRequest);
+      
+      // Validate entire response structure with only 'add' tool
+      const validatedResponse = ToolsListResponseSchema.parse(response);
+      expect(validatedResponse).toEqual({
+        jsonrpc: '2.0',
+        id: 2,
+        result: {
+          tools: [
+            {
+              name: 'add',
+              title: 'Addition Tool',
+              description: 'Add two numbers',
+              inputSchema: {
+                $schema: 'http://json-schema.org/draft-07/schema#',
+                additionalProperties: false,
+                properties: {
+                  a: { type: 'number' },
+                  b: { type: 'number' },
+                },
+                required: ['a', 'b'],
+                type: 'object',
+              },
+            },
+          ],
+        },
+      });
+    });
+  });
+
+  describe('disabled tools filtering', () => {
+    beforeAll(async () => {
+      // Start proxy with 'get-args' tool disabled
+      proxyProcess = Bun.spawn([
+        proxyExecutable,
+        '--disabled-tools', 'get-args',
+        'bun', 'run', fixtureServerPath
+      ], {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      
+      // Give the proxy time to start
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Initialize the connection
+      const initRequest = {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: { tools: {}, resources: {} },
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      };
+      await sendJsonRpcMessage(initRequest);
+      
+      const initNotification = {
+        jsonrpc: '2.0',
+        method: 'initialized',
+      };
+      await sendNotification(initNotification);
+    });
+
+    test('should exclude disabled tools from tools/list response', async () => {
+      const toolsRequest = {
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/list',
+      };
+
+      const response = await sendJsonRpcMessage(toolsRequest);
+      
+      // Validate entire response structure with only 'add' tool (get-args disabled)
+      const validatedResponse = ToolsListResponseSchema.parse(response);
+      expect(validatedResponse).toEqual({
+        jsonrpc: '2.0',
+        id: 2,
+        result: {
+          tools: [
+            {
+              name: 'add',
+              title: 'Addition Tool',
+              description: 'Add two numbers',
+              inputSchema: {
+                $schema: 'http://json-schema.org/draft-07/schema#',
+                additionalProperties: false,
+                properties: {
+                  a: { type: 'number' },
+                  b: { type: 'number' },
+                },
+                required: ['a', 'b'],
+                type: 'object',
+              },
+            },
+          ],
+        },
+      });
     });
   });
 });
