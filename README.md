@@ -1,13 +1,16 @@
 # MCP Proxy
 
-A Model Context Protocol (MCP) server that acts as a transparent proxy, forwarding JSON RPC communication between MCP clients and target MCP servers.
+A Model Context Protocol (MCP) server that acts as a proxy between MCP clients and target MCP servers, with **tool filtering** capabilities to control which tools are exposed to clients.
 
-## Features
+## Key Features
 
-- **Transparent Proxying**: Forwards all MCP protocol messages between clients and target servers
-- **Command Line Interface**: Start any MCP server through command arguments
-- **Graceful Shutdown**: Handles SIGINT/SIGTERM signals to clean up processes
-- **TypeScript**: Full type safety with modern ES modules
+- **🔧 Tool Filtering**: Selectively enable or disable specific tools from target MCP servers
+- **🔍 Transparent Proxying**: Forwards all other MCP protocol messages without modification  
+- **⚡ Zero Configuration**: Works with any existing MCP server without changes
+- **🛡️ Access Control**: Control which tools clients can access for security and usability
+- **📦 Command Line Interface**: Start any MCP server through command arguments
+- **🔄 Graceful Shutdown**: Handles SIGINT/SIGTERM signals to clean up processes
+- **📝 TypeScript**: Full type safety with modern ES modules
 
 ## Installation
 
@@ -17,6 +20,8 @@ bun run build
 ```
 
 ## Usage
+
+### Basic Proxying (No Filtering)
 
 ```bash
 # Proxy to a local MCP server
@@ -29,20 +34,120 @@ bun run build
 ./mcp-proxy node server.js --port 3000
 ```
 
+### Tool Filtering
+
+Control which tools from the target server are exposed to clients:
+
+```bash
+# Only allow specific tools (whitelist mode)
+./mcp-proxy --enabled-tools file-read,file-write,search bun run my-server.ts
+
+# Block specific tools (blacklist mode)  
+./mcp-proxy --disabled-tools dangerous-tool,admin-commands python -m my_server
+
+# Multiple tools (comma-separated, no spaces around commas)
+./mcp-proxy --enabled-tools tool1,tool2,tool3 node server.js
+```
+
+### Filtering Rules
+
+- **`--enabled-tools`**: Only the specified tools will be available to clients (whitelist)
+- **`--disabled-tools`**: All tools except the specified ones will be available (blacklist)
+- **Mutually Exclusive**: You can use either `--enabled-tools` OR `--disabled-tools`, but not both
+- **Case Sensitive**: Tool names must match exactly as defined in the target server
+- **No Spaces**: Use comma-separated values without spaces: `tool1,tool2,tool3`
+
+## Use Cases
+
+### Security & Access Control
+```bash
+# Production environment - only allow safe read-only tools
+./mcp-proxy --enabled-tools read-file,search,list-files my-server
+
+# Development environment - block dangerous operations
+./mcp-proxy --disabled-tools delete-file,format-disk,restart-system my-server
+```
+
+### Client-Specific Customization
+```bash
+# For a documentation client - only text processing tools
+./mcp-proxy --enabled-tools text-search,summarize,translate content-server
+
+# For an admin interface - block user-facing tools  
+./mcp-proxy --disabled-tools user-chat,send-email,post-social admin-server
+```
+
+### Testing & Development
+```bash
+# Test specific functionality by isolating tools
+./mcp-proxy --enabled-tools database-query,cache-get test-server
+
+# Debug by excluding problematic tools
+./mcp-proxy --disabled-tools flaky-api,slow-process debug-server
+```
+
 ## How it Works
 
-1. The proxy accepts command arguments specifying the target MCP server
-2. When a client connects, the proxy spawns the target server process
-3. All JSON RPC messages are forwarded bidirectionally between client and target server
-4. The proxy handles process lifecycle and cleanup
+1. **Process Management**: The proxy accepts command arguments and spawns the target MCP server process
+2. **Message Interception**: All JSON-RPC messages flow through the proxy bidirectionally
+3. **Tool Filtering**: When clients request `tools/list`, the proxy filters the response based on your configuration
+4. **Transparent Forwarding**: All other messages (resources, prompts, tool calls, etc.) pass through unchanged
+5. **Lifecycle Management**: The proxy handles process cleanup and graceful shutdown
 
 ## Architecture
 
 ```
 MCP Client ↔ MCP Proxy Server ↔ Target MCP Server
+              (Tool Filtering)
 ```
 
-The proxy implements the MCP server interface and forwards all requests to the target server, returning responses transparently.
+### Message Flow
+
+1. **Client → Proxy → Target**: All requests forwarded transparently
+2. **Target → Proxy → Client**: 
+   - `tools/list` responses are filtered based on configuration
+   - All other responses pass through unchanged
+
+### What Gets Filtered
+
+- ✅ **`tools/list` responses** - Tool arrays are filtered according to your settings
+- ❌ **Tool calls** - Individual tool invocations pass through (filtered tools simply won't be available)
+- ❌ **Resources** - Resource lists and access remain unchanged  
+- ❌ **Prompts** - Prompt functionality unaffected
+- ❌ **Other messages** - Initialization, capabilities, etc. pass through
+
+## CLI Reference
+
+```bash
+Usage: mcp-proxy [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]
+
+Options:
+  --enabled-tools <tools>    Comma-separated list of tools to allow (whitelist mode)
+  --disabled-tools <tools>   Comma-separated list of tools to block (blacklist mode)
+
+Examples:
+  mcp-proxy bun run server.ts                              # No filtering
+  mcp-proxy --enabled-tools read,write bun run server.ts   # Only allow read,write
+  mcp-proxy --disabled-tools delete python -m server       # Block delete tool
+```
+
+## Error Handling
+
+The proxy validates arguments at startup and will exit with helpful error messages:
+
+```bash
+# Missing command
+$ ./mcp-proxy --enabled-tools read
+Error: No target command specified
+
+# Both filtering modes
+$ ./mcp-proxy --enabled-tools read --disabled-tools write bun server.ts  
+Error: --enabled-tools and --disabled-tools are mutually exclusive
+
+# Missing tool list
+$ ./mcp-proxy --enabled-tools bun server.ts
+Error: --enabled-tools requires a value
+```
 
 ## Development
 
@@ -50,10 +155,13 @@ The proxy implements the MCP server interface and forwards all requests to the t
 # Install dependencies
 bun install
 
-# Run in development mode
+# Build the executable
+bun run build
+
+# Run in development mode  
 bun run dev <target-command>
 
-# Run tests
+# Run tests (includes tool filtering tests)
 bun test
 
 # Lint and format
@@ -63,3 +171,7 @@ bun run format
 # Type check
 bun run typecheck
 ```
+
+## License
+
+MIT
