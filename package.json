@@ -1,6 +1,6 @@
 {
   "name": "mcp-controller",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server proxy that forwards JSON RPC communication between MCP clients and target servers",
   "type": "module",
   "bin": {
