@@ -15,7 +15,7 @@
   "scripts": {
     "build": "bun build src/cli.ts --compile --outfile mcp-controller",
     "dev": "bun run src/cli.ts",
-    "typecheck": "bun --bun tsc --noEmit",
+    "typecheck": "bun tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
