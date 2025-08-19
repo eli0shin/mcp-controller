@@ -36,5 +36,6 @@ jobs:
       
     - name: Verify executable
       run: |
-        ./mcp-controller --help
         ls -la mcp-controller
+        # Test that executable runs and shows usage (exits with error code 1 when no args)
+        ./mcp-controller || [ $? -eq 1 ]
