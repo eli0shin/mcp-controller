@@ -11,24 +11,20 @@ import {
   ListPromptsResultSchema,
   GetPromptResultSchema
 } from '@modelcontextprotocol/sdk/types.js';
-
-type JsonRpcMessage = {
-  jsonrpc: string;
-  id?: number;
-  method: string;
-  params?: Record<string, unknown>;
-};
-
-type JsonRpcResponse = {
-  jsonrpc: string;
-  id: number;
-  result?: unknown;
-  error?: {
-    code: number;
-    message: string;
-    data?: unknown;
-  };
-};
+import { withMcpCommander, type JsonRpcMessage, type JsonRpcResponse } from './test-utils.js';
+import { 
+  createInitializeRequest, 
+  createInitializedNotification, 
+  createToolsListRequest,
+  createToolCallRequest,
+  createResourcesListRequest,
+  createResourceReadRequest,
+  createResourceTemplatesListRequest,
+  createPingRequest,
+  createPromptsListRequest,
+  createPromptGetRequest,
+  createInvalidMethodRequest
+} from './test-messages.js';
 
 // Complete response schemas using MCP SDK types
 const InitializeResponseSchema = JSONRPCResponseSchema.extend({
@@ -144,22 +140,7 @@ describe('MCP Proxy Integration Tests', () => {
   }
 
   test('should initialize MCP connection through proxy', async () => {
-    const initRequest = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {
-          tools: {},
-          resources: {},
-        },
-        clientInfo: {
-          name: 'test-client',
-          version: '1.0.0',
-        },
-      },
-    };
+    const initRequest = createInitializeRequest();
 
     const response = await sendJsonRpcMessage(initRequest);
     
@@ -191,10 +172,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should send initialized notification through proxy', async () => {
-    const initNotification = {
-      jsonrpc: '2.0',
-      method: 'initialized',
-    };
+    const initNotification = createInitializedNotification();
 
     // Notifications don't return responses, but shouldn't error
     await sendNotification(initNotification);
@@ -207,11 +185,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should list tools through proxy', async () => {
-    const toolsRequest = {
-      jsonrpc: '2.0',
-      id: 2,
-      method: 'tools/list',
-    };
+    const toolsRequest = createToolsListRequest();
 
     const response = await sendJsonRpcMessage(toolsRequest);
     
@@ -277,18 +251,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should call tools through proxy', async () => {
-    const toolCallRequest = {
-      jsonrpc: '2.0',
-      id: 3,
-      method: 'tools/call',
-      params: {
-        name: 'add',
-        arguments: {
-          a: 5,
-          b: 3,
-        },
-      },
-    };
+    const toolCallRequest = createToolCallRequest(3, 'add', { a: 5, b: 3 });
 
     const response = await sendJsonRpcMessage(toolCallRequest);
     
@@ -309,15 +272,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should pass command line arguments through proxy to target server', async () => {
-    const argsRequest = {
-      jsonrpc: '2.0',
-      id: 13,
-      method: 'tools/call',
-      params: {
-        name: 'get-args',
-        arguments: {},
-      },
-    };
+    const argsRequest = createToolCallRequest(13, 'get-args');
 
     const response = await sendJsonRpcMessage(argsRequest);
     
@@ -338,11 +293,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should list resources through proxy', async () => {
-    const resourcesRequest = {
-      jsonrpc: '2.0',
-      id: 4,
-      method: 'resources/list',
-    };
+    const resourcesRequest = createResourcesListRequest();
 
     const response = await sendJsonRpcMessage(resourcesRequest);
     
@@ -365,14 +316,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should read resources through proxy', async () => {
-    const resourceReadRequest = {
-      jsonrpc: '2.0',
-      id: 5,
-      method: 'resources/read',
-      params: {
-        uri: 'greeting://world',
-      },
-    };
+    const resourceReadRequest = createResourceReadRequest(5, 'greeting://world');
 
     const response = await sendJsonRpcMessage(resourceReadRequest);
     
@@ -393,15 +337,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle errors through proxy', async () => {
-    const invalidToolRequest = {
-      jsonrpc: '2.0',
-      id: 6,
-      method: 'tools/call',
-      params: {
-        name: 'nonexistent-tool',
-        arguments: {},
-      },
-    };
+    const invalidToolRequest = createToolCallRequest(6, 'nonexistent-tool');
 
     const response = await sendJsonRpcMessage(invalidToolRequest);
     
@@ -418,12 +354,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle invalid JSON-RPC requests', async () => {
-    const invalidRequest = {
-      jsonrpc: '2.0',
-      id: 7,
-      method: 'invalid/method',
-      params: {},
-    };
+    const invalidRequest = createInvalidMethodRequest(7);
 
     const response = await sendJsonRpcMessage(invalidRequest);
     
@@ -440,18 +371,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle tool call with invalid arguments', async () => {
-    const invalidArgsRequest = {
-      jsonrpc: '2.0',
-      id: 8,
-      method: 'tools/call',
-      params: {
-        name: 'add',
-        arguments: {
-          a: 'not-a-number',
-          b: 3,
-        },
-      },
-    };
+    const invalidArgsRequest = createToolCallRequest(8, 'add', { a: 'not-a-number', b: 3 });
 
     const response = await sendJsonRpcMessage(invalidArgsRequest);
     
@@ -468,14 +388,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle resource read with invalid URI', async () => {
-    const invalidUriRequest = {
-      jsonrpc: '2.0',
-      id: 9,
-      method: 'resources/read',
-      params: {
-        uri: 'invalid://uri',
-      },
-    };
+    const invalidUriRequest = createResourceReadRequest(9, 'invalid://uri');
 
     const response = await sendJsonRpcMessage(invalidUriRequest);
     
@@ -492,11 +405,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should list resource templates through proxy', async () => {
-    const resourceTemplatesRequest = {
-      jsonrpc: '2.0',
-      id: 10,
-      method: 'resources/templates/list',
-    };
+    const resourceTemplatesRequest = createResourceTemplatesListRequest();
 
     const response = await sendJsonRpcMessage(resourceTemplatesRequest);
     
@@ -518,11 +427,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle ping through proxy', async () => {
-    const pingRequest = {
-      jsonrpc: '2.0',
-      id: 11,
-      method: 'ping',
-    };
+    const pingRequest = createPingRequest();
 
     const response = await sendJsonRpcMessage(pingRequest);
     
@@ -535,22 +440,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should validate server capabilities were proxied correctly', async () => {
-    const initRequest = {
-      jsonrpc: '2.0',
-      id: 12,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-06-18',
-        capabilities: {
-          tools: {},
-          resources: {},
-        },
-        clientInfo: {
-          name: 'test-client',
-          version: '1.0.0',
-        },
-      },
-    };
+    const initRequest = createInitializeRequest(12);
 
     const response = await sendJsonRpcMessage(initRequest);
     
@@ -582,11 +472,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should list prompts through proxy', async () => {
-    const promptsRequest = {
-      jsonrpc: '2.0',
-      id: 14,
-      method: 'prompts/list',
-    };
+    const promptsRequest = createPromptsListRequest();
 
     const response = await sendJsonRpcMessage(promptsRequest);
     
@@ -614,17 +500,7 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should get prompt with arguments through proxy', async () => {
-    const promptGetRequest = {
-      jsonrpc: '2.0',
-      id: 15,
-      method: 'prompts/get',
-      params: {
-        name: 'generate-greeting',
-        arguments: {
-          name: 'Alice',
-        },
-      },
-    };
+    const promptGetRequest = createPromptGetRequest(15, 'generate-greeting', { name: 'Alice' });
 
     const response = await sendJsonRpcMessage(promptGetRequest);
     
@@ -649,209 +525,104 @@ describe('MCP Proxy Integration Tests', () => {
 });
 
 describe('MCP Proxy Tool Filtering Tests', () => {
-  let proxyProcess: Bun.Subprocess;
-  
-  const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
-  const controllerExecutable = path.resolve('./mcp-controller');
-  
-  afterAll(async () => {
-    if (proxyProcess) {
-      proxyProcess.kill();
-      await proxyProcess.exited;
-    }
-  });
-
-  // Helper function to send JSON-RPC message and get response
-  async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
-    const messageStr = JSON.stringify(message) + '\n';
-    
-    // Type guard to ensure stdin is available
-    if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
-      throw new Error('Process stdin is not available');
-    }
-    
-    // Write to stdin (FileSink in Bun)
-    proxyProcess.stdin.write(messageStr);
-    
-    // Type guard to ensure stdout is a ReadableStream
-    if (!proxyProcess.stdout || typeof proxyProcess.stdout === 'number') {
-      throw new Error('Process stdout is not available');
-    }
-    
-    // Read response from stdout
-    const reader = proxyProcess.stdout.getReader();
-    const { value } = await reader.read();
-    reader.releaseLock();
-    
-    if (value) {
-      const responseStr = new TextDecoder().decode(value);
-      const lines = responseStr.trim().split('\n');
-      // Return the last JSON line (ignore any debug output)
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          return JSON.parse(lines[i]) as JsonRpcResponse;
-        } catch {
-          continue;
-        }
-      }
-    }
-    
-    throw new Error('No valid JSON response received');
-  }
-
-  // Helper function to send notification (no response expected)
-  async function sendNotification(message: JsonRpcMessage): Promise<void> {
-    const messageStr = JSON.stringify(message) + '\n';
-    
-    if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
-      throw new Error('Process stdin is not available');
-    }
-    
-    proxyProcess.stdin.write(messageStr);
-  }
 
   describe('enabled tools filtering', () => {
-    beforeAll(async () => {
-      // Start proxy with only 'add' tool enabled
-      proxyProcess = Bun.spawn([
-        controllerExecutable,
-        '--enabled-tools', 'add',
-        'bun', 'run', fixtureServerPath
-      ], {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      
-      // Give the proxy time to start
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Initialize the connection
-      const initRequest = {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-06-18',
-          capabilities: { tools: {}, resources: {} },
-          clientInfo: { name: 'test-client', version: '1.0.0' },
-        },
-      };
-      await sendJsonRpcMessage(initRequest);
-      
-      const initNotification = {
-        jsonrpc: '2.0',
-        method: 'initialized',
-      };
-      await sendNotification(initNotification);
-    });
-
     test('should only return enabled tools in tools/list response', async () => {
-      const toolsRequest = {
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-      };
+      await withMcpCommander(['--enabled-tools', 'add'], async (sendJsonRpcMessage, sendNotification) => {
+        // Initialize the connection
+        const initRequest = createInitializeRequest();
+        await sendJsonRpcMessage(initRequest);
+        
+        const initNotification = createInitializedNotification();
+        await sendNotification(initNotification);
 
-      const response = await sendJsonRpcMessage(toolsRequest);
-      
-      // Validate entire response structure with only 'add' tool
-      const validatedResponse = ToolsListResponseSchema.parse(response);
-      expect(validatedResponse).toEqual({
-        jsonrpc: '2.0',
-        id: 2,
-        result: {
-          tools: [
-            {
-              name: 'add',
-              title: 'Addition Tool',
-              description: 'Add two numbers',
-              inputSchema: {
-                $schema: 'http://json-schema.org/draft-07/schema#',
-                additionalProperties: false,
-                properties: {
-                  a: { type: 'number' },
-                  b: { type: 'number' },
+        const toolsRequest = createToolsListRequest();
+
+        const response = await sendJsonRpcMessage(toolsRequest);
+        
+        // Validate entire response structure with only 'add' tool (filtering working correctly)
+        const validatedResponse = ToolsListResponseSchema.parse(response);
+        expect(validatedResponse).toEqual({
+          jsonrpc: '2.0',
+          id: 2,
+          result: {
+            tools: [
+              {
+                name: 'add',
+                title: 'Addition Tool', 
+                description: 'Add two numbers',
+                inputSchema: {
+                  $schema: 'http://json-schema.org/draft-07/schema#',
+                  additionalProperties: false,
+                  properties: {
+                    a: { type: 'number' },
+                    b: { type: 'number' },
+                  },
+                  required: ['a', 'b'],
+                  type: 'object',
                 },
-                required: ['a', 'b'],
-                type: 'object',
               },
-            },
-          ],
-        },
+            ],
+          },
+        });
       });
     });
   });
 
   describe('disabled tools filtering', () => {
-    beforeAll(async () => {
-      // Start proxy with 'get-args' tool disabled
-      proxyProcess = Bun.spawn([
-        controllerExecutable,
-        '--disabled-tools', 'get-args',
-        'bun', 'run', fixtureServerPath
-      ], {
-        stdin: 'pipe',
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      
-      // Give the proxy time to start
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Initialize the connection
-      const initRequest = {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-06-18',
-          capabilities: { tools: {}, resources: {} },
-          clientInfo: { name: 'test-client', version: '1.0.0' },
-        },
-      };
-      await sendJsonRpcMessage(initRequest);
-      
-      const initNotification = {
-        jsonrpc: '2.0',
-        method: 'initialized',
-      };
-      await sendNotification(initNotification);
-    });
-
     test('should exclude disabled tools from tools/list response', async () => {
-      const toolsRequest = {
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'tools/list',
-      };
+      await withMcpCommander(['--disabled-tools', 'get-args'], async (sendJsonRpcMessage, sendNotification) => {
+        // Initialize the connection
+        const initRequest = createInitializeRequest();
+        await sendJsonRpcMessage(initRequest);
+        
+        const initNotification = createInitializedNotification();
+        await sendNotification(initNotification);
 
-      const response = await sendJsonRpcMessage(toolsRequest);
-      
-      // Validate entire response structure with only 'add' tool (get-args disabled)
-      const validatedResponse = ToolsListResponseSchema.parse(response);
-      expect(validatedResponse).toEqual({
-        jsonrpc: '2.0',
-        id: 2,
-        result: {
-          tools: [
-            {
-              name: 'add',
-              title: 'Addition Tool',
-              description: 'Add two numbers',
-              inputSchema: {
-                $schema: 'http://json-schema.org/draft-07/schema#',
-                additionalProperties: false,
-                properties: {
-                  a: { type: 'number' },
-                  b: { type: 'number' },
+        const toolsRequest = createToolsListRequest();
+
+        const response = await sendJsonRpcMessage(toolsRequest);
+        
+        // Validate entire response structure excluding 'get-args' tool (filtering working correctly)
+        const validatedResponse = ToolsListResponseSchema.parse(response);
+        expect(validatedResponse).toEqual({
+          jsonrpc: '2.0',
+          id: 2,
+          result: {
+            tools: [
+              {
+                name: 'add',
+                title: 'Addition Tool',
+                description: 'Add two numbers',
+                inputSchema: {
+                  $schema: 'http://json-schema.org/draft-07/schema#',
+                  additionalProperties: false,
+                  properties: {
+                    a: { type: 'number' },
+                    b: { type: 'number' },
+                  },
+                  required: ['a', 'b'],
+                  type: 'object',
                 },
-                required: ['a', 'b'],
-                type: 'object',
               },
-            },
-          ],
-        },
+              {
+                name: 'subtract',
+                title: 'Subtraction Tool',
+                description: 'Subtract two numbers',
+                inputSchema: {
+                  $schema: 'http://json-schema.org/draft-07/schema#',
+                  additionalProperties: false,
+                  properties: {
+                    a: { type: 'number' },
+                    b: { type: 'number' },
+                  },
+                  required: ['a', 'b'],
+                  type: 'object',
+                },
+              },
+            ],
+          },
+        });
       });
     });
   });

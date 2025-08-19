@@ -1,6 +1,8 @@
-import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
+import { test, expect, describe } from 'bun:test';
 import path from 'path';
 import { z } from 'zod';
+import { withMcpCommander } from './test-utils.js';
+import { createInitializeRequest, createToolsListRequest } from './test-messages.js';
 
 const ToolsListResponseSchema = z.object({
   jsonrpc: z.literal('2.0'),
@@ -15,120 +17,32 @@ const ToolsListResponseSchema = z.object({
 });
 
 
-type JsonRpcMessage = {
-  jsonrpc: '2.0';
-  id: number;
-  method?: string;
-  params?: Record<string, unknown>;
-  result?: unknown;
-  error?: {
-    code: number;
-    message: string;
-    data?: unknown;
-  };
-};
-
-// Utility function to send JSON-RPC message and get response
-async function sendJsonRpcMessage(
-  process: Bun.Subprocess,
-  message: JsonRpcMessage
-): Promise<JsonRpcMessage> {
-  (process.stdin as Bun.FileSink).write(JSON.stringify(message) + '\n');
-  
-  const reader = (process.stdout as ReadableStream<Uint8Array>).getReader();
-  let buffer = '';
-  
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) throw new Error('Stream ended without response');
-    
-    if (value) {
-      buffer += new TextDecoder().decode(value);
-      const lines = buffer.split('\n');
-      
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            const response = JSON.parse(line.trim()) as JsonRpcMessage;
-            if (response.id === message.id) {
-              reader.releaseLock();
-              return response;
-            }
-          } catch {
-            // Continue if line isn't valid JSON
-            continue;
-          }
-        }
-      }
-    }
-  }
-}
 
 describe('Wildcard Tool Filtering Tests', () => {
-  let controllerProcess: Bun.Subprocess;
-  const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
-  
-  beforeAll(async () => {
-    // Start controller with wildcard patterns in proxy mode
-    controllerProcess = Bun.spawn([
-      'bun', 'run', 'src/cli.ts',
-      '--enabled-tools', 'get-*,add',
-      'bun', 'run', fixtureServerPath
-    ], {
-      stdin: 'pipe',
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  });
-  
-  afterAll(async () => {
-    if (controllerProcess) {
-      controllerProcess.kill();
-      await controllerProcess.exited;
-    }
-  });
-
   test('should filter tools using wildcard patterns in proxy mode', async () => {
-    // Initialize the connection
-    const initializeRequest = {
-      jsonrpc: '2.0' as const,
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '0.1.0',
-        capabilities: {},
-        clientInfo: {
-          name: 'test-client',
-          version: '1.0.0',
-        },
-      },
-    };
+    await withMcpCommander(['--enabled-tools', 'get-*,add'], async (sendJsonRpcMessage) => {
+      // Initialize the connection
+      const initializeRequest = createInitializeRequest(1, '0.1.0');
 
-    const initResponse = await sendJsonRpcMessage(controllerProcess, initializeRequest);
-    expect(initResponse.error).toBeUndefined();
+      const initResponse = await sendJsonRpcMessage(initializeRequest);
+      expect(initResponse.error).toBeUndefined();
 
-    // Request tools list
-    const toolsRequest = {
-      jsonrpc: '2.0' as const,
-      id: 2,
-      method: 'tools/list',
-      params: {},
-    };
+      // Request tools list
+      const toolsRequest = createToolsListRequest();
 
-    const response = await sendJsonRpcMessage(controllerProcess, toolsRequest);
-    const validatedResponse = ToolsListResponseSchema.parse(response);
-    
-    // Should only include tools matching get-* pattern and exact match 'add'
-    const toolNames = validatedResponse.result.tools.map(tool => tool.name);
-    
-    // Verify wildcard matching: should include get-args (matches get-*)
-    expect(toolNames).toContain('get-args');
-    expect(toolNames).toContain('add');
-    
-    // Should NOT include tools that don't match pattern
-    expect(toolNames).not.toContain('subtract');
+      const response = await sendJsonRpcMessage(toolsRequest);
+      const validatedResponse = ToolsListResponseSchema.parse(response);
+      
+      // Should only include tools matching get-* pattern and exact match 'add'
+      const toolNames = validatedResponse.result.tools.map(tool => tool.name);
+      
+      // Verify wildcard matching: should include get-args (matches get-*)
+      expect(toolNames).toContain('get-args');
+      expect(toolNames).toContain('add');
+      
+      // Should NOT include tools that don't match pattern
+      expect(toolNames).not.toContain('subtract');
+    });
   });
 });
 
