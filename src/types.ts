@@ -4,6 +4,7 @@ export type ProxyConfig = {
   disabledTools?: string[];
   serverName: string;
   serverVersion: string;
+  mode?: 'proxy' | 'list-tools';
 };
 
 export type TargetServerProcess = {
