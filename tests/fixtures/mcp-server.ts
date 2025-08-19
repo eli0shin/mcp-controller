@@ -44,6 +44,19 @@ server.registerTool(
   })
 );
 
+// Add a subtraction tool
+server.registerTool(
+  'subtract',
+  {
+    title: 'Subtraction Tool',
+    description: 'Subtract two numbers',
+    inputSchema: { a: z.number(), b: z.number() },
+  },
+  async ({ a, b }) => ({
+    content: [{ type: 'text', text: String(a - b) }],
+  })
+);
+
 // Add a tool that returns the initialization arguments
 server.registerTool(
   'get-args',

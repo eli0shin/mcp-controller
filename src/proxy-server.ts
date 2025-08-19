@@ -1,5 +1,6 @@
 import type { ProxyConfig, TargetServerProcess, JsonRpcMessage, ToolsListResult } from './types.js';
 import { TargetServerManager } from './target-server.js';
+import { matchesToolPattern } from './utils.js';
 
 export class McpProxyServer {
   private targetManager: TargetServerManager;
@@ -107,9 +108,9 @@ export class McpProxyServer {
     let filteredTools = result.tools;
     
     if (enabledTools) {
-      filteredTools = filteredTools.filter(tool => enabledTools.includes(tool.name));
+      filteredTools = filteredTools.filter(tool => enabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
     } else if (disabledTools) {
-      filteredTools = filteredTools.filter(tool => !disabledTools.includes(tool.name));
+      filteredTools = filteredTools.filter(tool => !disabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
     }
     
     return {

@@ -24,10 +24,11 @@ describe('List Tools Command Tests', () => {
     // Should not have errors
     expect(errorOutput.trim()).toBe('');
     
-    // Should list both tools in the expected format
+    // Should list all tools in the expected format
     const lines = output.trim().split('\n');
     expect(lines).toEqual([
       'add: Add two numbers',
+      'subtract: Subtract two numbers',
       'get-args: Returns the command line arguments passed to the server'
     ]);
   });
@@ -79,10 +80,11 @@ describe('List Tools Command Tests', () => {
     // Should not have errors
     expect(errorOutput.trim()).toBe('');
     
-    // Should only list the non-disabled tool
+    // Should only list the non-disabled tools  
     const lines = output.trim().split('\n');
     expect(lines).toEqual([
-      'add: Add two numbers'
+      'add: Add two numbers',
+      'subtract: Subtract two numbers'
     ]);
   });
 
@@ -190,6 +192,7 @@ describe('List Tools Command Tests', () => {
     const lines = output.trim().split('\n');
     expect(lines).toEqual([
       'add: Add two numbers',
+      'subtract: Subtract two numbers',
       'get-args: Returns the command line arguments passed to the server'
     ]);
   });
