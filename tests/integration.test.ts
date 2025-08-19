@@ -242,6 +242,25 @@ describe('MCP Proxy Integration Tests', () => {
             },
           },
           {
+            name: 'subtract',
+            title: 'Subtraction Tool',
+            description: 'Subtract two numbers',
+            inputSchema: {
+              $schema: 'http://json-schema.org/draft-07/schema#',
+              additionalProperties: false,
+              properties: {
+                a: {
+                  type: 'number',
+                },
+                b: {
+                  type: 'number',
+                },
+              },
+              required: ['a', 'b'],
+              type: 'object',
+            },
+          },
+          {
             name: 'get-args',
             title: 'Get Arguments Tool',
             description: 'Returns the command line arguments passed to the server',

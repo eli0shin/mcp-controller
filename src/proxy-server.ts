@@ -1,6 +1,21 @@
 import type { ProxyConfig, TargetServerProcess, JsonRpcMessage, ToolsListResult } from './types.js';
 import { TargetServerManager } from './target-server.js';
 
+function matchesToolPattern(toolName: string, pattern: string): boolean {
+  // Exact match for patterns without wildcards (backward compatibility)
+  if (!pattern.includes('*')) {
+    return toolName === pattern;
+  }
+  
+  // Convert glob pattern to regex with proper escaping
+  const escapedPattern = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
+    .replace(/\*/g, '.*'); // Replace * with .*
+  
+  const regex = new RegExp(`^${escapedPattern}$`);
+  return regex.test(toolName);
+}
+
 export class McpProxyServer {
   private targetManager: TargetServerManager;
   private config: ProxyConfig;
@@ -107,9 +122,9 @@ export class McpProxyServer {
     let filteredTools = result.tools;
     
     if (enabledTools) {
-      filteredTools = filteredTools.filter(tool => enabledTools.includes(tool.name));
+      filteredTools = filteredTools.filter(tool => enabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
     } else if (disabledTools) {
-      filteredTools = filteredTools.filter(tool => !disabledTools.includes(tool.name));
+      filteredTools = filteredTools.filter(tool => !disabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
     }
     
     return {

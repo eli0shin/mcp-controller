@@ -4,6 +4,21 @@ import { McpProxyServer } from './proxy-server.js';
 import type { ProxyConfig, Tool } from './types.js';
 import { TargetServerManager } from './target-server.js';
 
+function matchesToolPattern(toolName: string, pattern: string): boolean {
+  // Exact match for patterns without wildcards (backward compatibility)
+  if (!pattern.includes('*')) {
+    return toolName === pattern;
+  }
+  
+  // Convert glob pattern to regex with proper escaping
+  const escapedPattern = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
+    .replace(/\*/g, '.*'); // Replace * with .*
+  
+  const regex = new RegExp(`^${escapedPattern}$`);
+  return regex.test(toolName);
+}
+
 function parseListToolsArguments(args: string[]): ProxyConfig {
   if (args.length === 0) {
     process.stderr.write('Error: No target command specified for list-tools\n');
@@ -65,7 +80,9 @@ function parseArguments(): ProxyConfig {
   if (args.length === 0) {
     process.stderr.write('Usage: mcp-controller [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]\n');
     process.stderr.write('       mcp-controller list-tools [--enabled-tools <tool1,tool2,...>] [--disabled-tools <tool1,tool2,...>] <command> [args...]\n');
+    process.stderr.write('Tool patterns support wildcards: use * to match any characters (e.g., get_* matches get_logs, get_metrics)\n');
     process.stderr.write('Example: mcp-controller --enabled-tools add,subtract bun run server.ts\n');
+    process.stderr.write('Example: mcp-controller --enabled-tools "get_*,list_*" bun run server.ts\n');
     process.stderr.write('Example: mcp-controller list-tools bun run server.ts\n');
     process.stderr.write('Example: mcp-controller --disabled-tools dangerous-tool bun run server.ts\n');
     process.exit(1);
@@ -201,9 +218,9 @@ async function listTools(config: ProxyConfig): Promise<void> {
                 let tools = response.result.tools || [];
                 
                 if (config.enabledTools) {
-                  tools = tools.filter((tool: Tool) => config.enabledTools!.includes(tool.name));
+                  tools = tools.filter((tool: Tool) => config.enabledTools!.some(pattern => matchesToolPattern(tool.name, pattern)));
                 } else if (config.disabledTools) {
-                  tools = tools.filter((tool: Tool) => !config.disabledTools!.includes(tool.name));
+                  tools = tools.filter((tool: Tool) => !config.disabledTools!.some(pattern => matchesToolPattern(tool.name, pattern)));
                 }
                 
                 // Print tools in the requested format
