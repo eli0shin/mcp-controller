@@ -27,6 +27,9 @@ bun run build
 # Proxy to a local MCP server
 ./mcp-controller bun run my-server.ts
 
+# Proxy to an npm-distributed MCP server
+./mcp-controller @modelcontextprotocol/server-sequential-thinking
+
 # Proxy to a Python MCP server
 ./mcp-controller python -m my_mcp_server
 

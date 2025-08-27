@@ -10,17 +10,24 @@ export class TargetServerManager {
 
     const [command, ...args] = config.targetCommand;
     
-    const process = Bun.spawn([command, ...args], {
+    // Strip bunx/npx prefixes to avoid redundant calls
+    const targetCommand = (command === 'bunx' || command === 'npx') ? args : [command, ...args];
+
+    const subprocess = Bun.spawn([process.execPath, "x", ...targetCommand], {
       stdin: 'pipe',
       stdout: 'pipe',
       stderr: 'inherit',
+      env: {
+        ...process.env,
+        BUN_BE_BUN: "1"
+      }
     });
 
-    const stdin = process.stdin;
-    const stdout = process.stdout;
+    const stdin = subprocess.stdin;
+    const stdout = subprocess.stdout;
 
     this.targetServer = {
-      process,
+      process: subprocess,
       stdin,
       stdout,
     };
