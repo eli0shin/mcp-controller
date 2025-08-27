@@ -1,7 +1,7 @@
 {
   "name": "mcp-controller",
   "version": "0.2.0",
-  "description": "MCP server proxy that forwards JSON RPC communication between MCP clients and target servers",
+  "description": "MCP server proxy that enables controlling availability of tools.",
   "type": "module",
   "bin": {
     "mcp-controller": "mcp-controller"
@@ -24,12 +24,9 @@
     "test:watch": "bun test tests/ --watch",
     "prepublish": "bun test && bun run build"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "zod": "^3.23.8"
-  },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/node": "^22.9.0",
     "bun-types": "^1.1.34",
     "eslint": "^9.15.0",
@@ -37,13 +34,8 @@
     "globals": "^15.12.0",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.14.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "typescript-eslint": "^8.14.0",
+    "zod": "^3.23.8"
   },
   "keywords": [
     "mcp",
@@ -52,6 +44,6 @@
     "json-rpc",
     "cli"
   ],
-  "author": "",
+  "author": "@eli0shin",
   "license": "MIT"
 }
