@@ -36,29 +36,18 @@ describe('Bunx Integration Tests', () => {
       const messageStr = JSON.stringify(request) + '\n';
 
       // Send initialize request
-      if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
-        throw new Error('Process stdin is not available');
-      }
       proxyProcess.stdin.write(messageStr);
 
       // Read response
-      if (!proxyProcess.stdout || typeof proxyProcess.stdout === 'number') {
-        throw new Error('Process stdout is not available');
-      }
-
       const reader = proxyProcess.stdout.getReader();
       const { value } = await reader.read();
       reader.releaseLock();
-
-      if (!value) {
-        throw new Error('No response received');
-      }
 
       const responseStr = new TextDecoder().decode(value);
       const lines = responseStr.trim().split('\n');
 
       // Find valid JSON response
-      let response;
+      let response: unknown;
       for (let i = lines.length - 1; i >= 0; i--) {
         try {
           response = JSON.parse(lines[i]);
@@ -66,10 +55,6 @@ describe('Bunx Integration Tests', () => {
         } catch {
           continue;
         }
-      }
-
-      if (!response) {
-        throw new Error('No valid JSON response received');
       }
 
       // Validate response structure
@@ -92,10 +77,8 @@ describe('Bunx Integration Tests', () => {
         },
       });
     } finally {
-      if (proxyProcess) {
-        proxyProcess.kill();
-        await proxyProcess.exited;
-      }
+      proxyProcess.kill();
+      await proxyProcess.exited;
     }
   }, 15000);
 });

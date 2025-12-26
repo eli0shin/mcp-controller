@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { withMcpCommander } from './test-utils.js';
 import { createInitializeRequest, createToolsListRequest } from './test-messages.js';
 
+async function getProcessOutput(proc: Bun.Subprocess<"pipe", "pipe", "pipe">): Promise<string> {
+  return new Response(proc.stdout).text();
+}
+
 const ToolsListResponseSchema = z.object({
   jsonrpc: z.literal('2.0'),
   id: z.number(),
@@ -50,7 +54,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should support wildcard patterns in list-tools mode', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--enabled-tools', 'get-*',
@@ -62,10 +66,10 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     // Get the output
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     
@@ -80,7 +84,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should support disabled tools with wildcards', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--disabled-tools', 'get-*',
@@ -92,9 +96,9 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     
@@ -109,7 +113,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should handle exact matches without wildcards (backward compatibility)', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--enabled-tools', 'add',
@@ -121,9 +125,9 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     
@@ -138,7 +142,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should handle mixed exact and wildcard patterns', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--enabled-tools', 'add,get-*',
@@ -150,9 +154,9 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     
@@ -169,7 +173,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should handle match-all wildcard pattern', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--enabled-tools', '*',
@@ -181,9 +185,9 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     
@@ -196,7 +200,7 @@ describe('List-Tools Mode Wildcard Tests', () => {
   test('should handle complex wildcard patterns', async () => {
     const fixtureServerPath = path.resolve(import.meta.dirname, 'fixtures', 'mcp-server.ts');
     
-    const listToolsProcess = Bun.spawn([
+    const listToolsProcess: Bun.Subprocess<"pipe", "pipe", "pipe"> = Bun.spawn([
       'bun', 'run', 'src/cli.ts',
       'list-tools',
       '--enabled-tools', '*-args',
@@ -208,9 +212,9 @@ describe('List-Tools Mode Wildcard Tests', () => {
     });
 
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const stdout = await new Response(listToolsProcess.stdout as ReadableStream).text();
-    
+
+    const stdout = await getProcessOutput(listToolsProcess);
+
     listToolsProcess.kill();
     await listToolsProcess.exited;
     

@@ -1,10 +1,11 @@
-import type { ProxyConfig, TargetServerProcess, JsonRpcMessage, ToolsListResult } from './types.js';
+import type { ProxyConfig, TargetServerProcess, ToolsListResult } from './types.js';
 import { TargetServerManager } from './target-server.js';
 import { matchesToolPattern } from './utils.js';
+import { JSONRPCMessageSchema, ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
 export class McpProxyServer {
-  private targetManager: TargetServerManager;
-  private config: ProxyConfig;
+  private readonly targetManager: TargetServerManager;
+  private readonly config: ProxyConfig;
   private targetServer: TargetServerProcess | null = null;
 
   constructor(config: ProxyConfig) {
@@ -43,21 +44,19 @@ export class McpProxyServer {
         while (this.targetServer) {
           const { value, done } = await reader.read();
           if (done) break;
-          
-          if (value) {
-            buffer += new TextDecoder().decode(value);
-            
-            // Process complete lines
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || ''; // Keep the incomplete line in buffer
-            
-            for (const line of lines) {
-              if (line.trim()) {
-                const processedLine = this.processMessage(line.trim());
-                process.stdout.write(processedLine + '\n');
-              } else {
-                process.stdout.write('\n');
-              }
+
+          buffer += new TextDecoder().decode(value);
+
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (line.trim()) {
+              const processedLine = this.processMessage(line.trim());
+              process.stdout.write(processedLine + '\n');
+            } else {
+              process.stdout.write('\n');
             }
           }
         }
@@ -76,21 +75,25 @@ export class McpProxyServer {
 
   private processMessage(line: string): string {
     try {
-      const message = JSON.parse(line) as JsonRpcMessage;
-      
+      const parsed = JSONRPCMessageSchema.safeParse(JSON.parse(line));
+      if (!parsed.success) {
+        return line;
+      }
+      const message = parsed.data;
+
       // Only filter tools/list responses
       if ('result' in message && !('method' in message) && !('error' in message)) {
         // This is a response message - check if it's a tools/list response
-        const result = message.result as Record<string, unknown>;
-        if (result && Array.isArray(result.tools)) {
-          const filteredResult = this.filterToolsListResponse(result as ToolsListResult);
+        const toolsResult = ListToolsResultSchema.safeParse(message.result);
+        if (toolsResult.success) {
+          const filteredResult = this.filterToolsListResponse(toolsResult.data);
           return JSON.stringify({
             ...message,
             result: filteredResult
           });
         }
       }
-      
+
       return line;
     } catch {
       // If JSON parsing fails, return the line unchanged
