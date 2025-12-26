@@ -45,5 +45,9 @@
     "cli"
   ],
   "author": "@eli0shin",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eli0shin/mcp-controller"
+  }
 }
