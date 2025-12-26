@@ -18,6 +18,12 @@ type JsonRpcResponse = {
   };
 };
 
+function isJsonRpcResponse(value: unknown): value is JsonRpcResponse {
+  if (typeof value !== 'object' || value === null) return false;
+  return 'jsonrpc' in value && typeof value.jsonrpc === 'string' &&
+         'id' in value && typeof value.id === 'number';
+}
+
 const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
 const controllerExecutable = path.resolve('./mcp-controller');
 
@@ -43,59 +49,43 @@ export async function withMcpCommander<T>(
     // Helper function to send JSON-RPC message and get response
     async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
       const messageStr = JSON.stringify(message) + '\n';
-      
-      // Type guard to ensure stdin is available
-      if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
-        throw new Error('Process stdin is not available');
-      }
-      
+
       // Write to stdin (FileSink in Bun)
       proxyProcess.stdin.write(messageStr);
-      
-      // Type guard to ensure stdout is a ReadableStream
-      if (!proxyProcess.stdout || typeof proxyProcess.stdout === 'number') {
-        throw new Error('Process stdout is not available');
-      }
-      
+
       // Read response from stdout
       const reader = proxyProcess.stdout.getReader();
       const { value } = await reader.read();
       reader.releaseLock();
-      
-      if (value) {
-        const responseStr = new TextDecoder().decode(value);
-        const lines = responseStr.trim().split('\n');
-        // Return the last JSON line (ignore any debug output)
-        for (let i = lines.length - 1; i >= 0; i--) {
-          try {
-            return JSON.parse(lines[i]) as JsonRpcResponse;
-          } catch {
-            continue;
+
+      const responseStr = new TextDecoder().decode(value);
+      const lines = responseStr.trim().split('\n');
+      // Return the last JSON line (ignore any debug output)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          const parsed: unknown = JSON.parse(lines[i]);
+          if (isJsonRpcResponse(parsed)) {
+            return parsed;
           }
+        } catch {
+          continue;
         }
       }
-      
+
       throw new Error('No valid JSON response received');
     }
 
     // Helper function to send notification (no response expected)
     async function sendNotification(message: JsonRpcMessage): Promise<void> {
       const messageStr = JSON.stringify(message) + '\n';
-      
-      if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
-        throw new Error('Process stdin is not available');
-      }
-      
       proxyProcess.stdin.write(messageStr);
     }
 
     return await callback(sendJsonRpcMessage, sendNotification);
   } finally {
     // Clean up - kill the proxy process
-    if (proxyProcess) {
-      proxyProcess.kill();
-      await proxyProcess.exited;
-    }
+    proxyProcess.kill();
+    await proxyProcess.exited;
   }
 }
 

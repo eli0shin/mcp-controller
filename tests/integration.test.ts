@@ -59,7 +59,7 @@ const ErrorResponseSchema = JSONRPCErrorSchema;
 
 
 describe('MCP Proxy Integration Tests', () => {
-  let proxyProcess: Bun.Subprocess;
+  let proxyProcess: Bun.Subprocess<"pipe", "pipe", "pipe">;
   
   const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
   const controllerExecutable = path.resolve('./mcp-controller');
@@ -84,58 +84,62 @@ describe('MCP Proxy Integration Tests', () => {
   });
   
   afterAll(async () => {
-    if (proxyProcess) {
-      proxyProcess.kill();
-      await proxyProcess.exited;
-    }
+    proxyProcess.kill();
+    await proxyProcess.exited;
   });
+
+  function isJsonRpcResponse(value: unknown): value is JsonRpcResponse {
+    if (typeof value !== 'object' || value === null) return false;
+    return 'jsonrpc' in value && typeof value.jsonrpc === 'string' &&
+           'id' in value && typeof value.id === 'number';
+  }
 
   // Helper function to send JSON-RPC message and get response
   async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
     const messageStr = JSON.stringify(message) + '\n';
-    
-    // Type guard to ensure stdin is available
+
+    // Type narrowing for Bun.Subprocess - TypeScript needs these checks even though ESLint thinks they're unnecessary
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
       throw new Error('Process stdin is not available');
     }
-    
-    // Write to stdin (FileSink in Bun)
-    proxyProcess.stdin.write(messageStr);
-    
-    // Type guard to ensure stdout is a ReadableStream
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!proxyProcess.stdout || typeof proxyProcess.stdout === 'number') {
       throw new Error('Process stdout is not available');
     }
-    
+
+    // Write to stdin (FileSink in Bun)
+    proxyProcess.stdin.write(messageStr);
+
     // Read response from stdout
     const reader = proxyProcess.stdout.getReader();
     const { value } = await reader.read();
     reader.releaseLock();
-    
-    if (value) {
-      const responseStr = new TextDecoder().decode(value);
-      const lines = responseStr.trim().split('\n');
-      // Return the last JSON line (ignore any debug output)
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          return JSON.parse(lines[i]) as JsonRpcResponse;
-        } catch {
-          continue;
+
+    const responseStr = new TextDecoder().decode(value);
+    const lines = responseStr.trim().split('\n');
+    // Return the last JSON line (ignore any debug output)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      try {
+        const parsed: unknown = JSON.parse(lines[i]);
+        if (isJsonRpcResponse(parsed)) {
+          return parsed;
         }
+      } catch {
+        continue;
       }
     }
-    
+
     throw new Error('No valid JSON response received');
   }
 
   // Helper function to send notification (no response expected)
   async function sendNotification(message: JsonRpcMessage): Promise<void> {
     const messageStr = JSON.stringify(message) + '\n';
-    
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!proxyProcess.stdin || typeof proxyProcess.stdin === 'number') {
       throw new Error('Process stdin is not available');
     }
-    
     proxyProcess.stdin.write(messageStr);
   }
 
@@ -175,13 +179,11 @@ describe('MCP Proxy Integration Tests', () => {
     const initNotification = createInitializedNotification();
 
     // Notifications don't return responses, but shouldn't error
+    // Test passes if sendNotification completes without throwing
     await sendNotification(initNotification);
-    
+
     // Give it time to process
     await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // If we get here without errors, the notification was handled
-    expect(true).toBe(true);
   });
 
   test('should list tools through proxy', async () => {

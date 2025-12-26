@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { McpProxyServer } from './proxy-server.js';
-import type { ProxyConfig, Tool } from './types.js';
+import { parseJsonRpcResponse, parseToolsArray, type ProxyConfig } from './types.js';
 import { TargetServerManager } from './target-server.js';
 import { matchesToolPattern } from './utils.js';
 
@@ -166,7 +166,10 @@ async function listTools(config: ProxyConfig): Promise<void> {
     const initResponse = initLines.find(line => line.trim());
     if (!initResponse) throw new Error('No valid response received');
     
-    const parsedInitResponse = JSON.parse(initResponse);
+    const parsedInitResponse = parseJsonRpcResponse(JSON.parse(initResponse));
+    if (!parsedInitResponse) {
+      throw new Error('Invalid JSON-RPC response from server');
+    }
     if (parsedInitResponse.error) {
       throw new Error(`Initialize failed: ${parsedInitResponse.error.message}`);
     }
@@ -187,39 +190,41 @@ async function listTools(config: ProxyConfig): Promise<void> {
       const { value, done } = await reader.read();
       if (done) break;
       
-      if (value) {
-        toolsBuffer += new TextDecoder().decode(value);
-        const lines = toolsBuffer.split('\n');
-        
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const response = JSON.parse(line.trim());
-              if (response.id === 2) {
-                if (response.error) {
-                  throw new Error(`Tools list failed: ${response.error.message}`);
-                }
-                
-                // Apply filtering and display tools
-                let tools = response.result.tools || [];
-                
-                if (config.enabledTools) {
-                  tools = tools.filter((tool: Tool) => config.enabledTools!.some(pattern => matchesToolPattern(tool.name, pattern)));
-                } else if (config.disabledTools) {
-                  tools = tools.filter((tool: Tool) => !config.disabledTools!.some(pattern => matchesToolPattern(tool.name, pattern)));
-                }
-                
-                // Print tools in the requested format
-                for (const tool of tools) {
-                  process.stdout.write(`${tool.name}: ${tool.description || 'No description available'}\n`);
-                }
-                
-                return; // Exit successfully
+      toolsBuffer += new TextDecoder().decode(value);
+      const lines = toolsBuffer.split('\n');
+
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const response = parseJsonRpcResponse(JSON.parse(line.trim()));
+            if (response?.id === 2) {
+              if (response.error) {
+                throw new Error(`Tools list failed: ${response.error.message}`);
               }
-            } catch {
-              // Continue reading if this line wasn't valid JSON
-              continue;
+
+              // Apply filtering and display tools
+              const rawTools = response.result?.tools;
+              let tools = parseToolsArray(rawTools);
+
+              const enabledTools = config.enabledTools;
+              const disabledTools = config.disabledTools;
+
+              if (enabledTools) {
+                tools = tools.filter((tool) => enabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
+              } else if (disabledTools) {
+                tools = tools.filter((tool) => !disabledTools.some(pattern => matchesToolPattern(tool.name, pattern)));
+              }
+
+              // Print tools in the requested format
+              for (const tool of tools) {
+                process.stdout.write(`${tool.name}: ${tool.description ?? 'No description available'}\n`);
+              }
+
+              return; // Exit successfully
             }
+          } catch {
+            // Continue reading if this line wasn't valid JSON
+            continue;
           }
         }
       }
@@ -231,9 +236,7 @@ async function listTools(config: ProxyConfig): Promise<void> {
     process.stderr.write(`Error listing tools: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   } finally {
-    if (targetManager) {
-      await targetManager.stopTargetServer();
-    }
+    await targetManager.stopTargetServer();
   }
 }
 

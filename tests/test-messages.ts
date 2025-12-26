@@ -3,7 +3,7 @@ import type { JsonRpcMessage } from './test-utils.js';
 // Common JSON-RPC message templates used across tests
 
 // Initialize request with configurable ID and protocol version
-export const createInitializeRequest = (id: number = 1, protocolVersion: string = '2025-06-18'): JsonRpcMessage => ({
+export const createInitializeRequest = (id = 1, protocolVersion = '2025-06-18'): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'initialize',
@@ -27,7 +27,7 @@ export const createInitializedNotification = (): JsonRpcMessage => ({
 });
 
 // Tools list request with configurable ID
-export const createToolsListRequest = (id: number = 2): JsonRpcMessage => ({
+export const createToolsListRequest = (id = 2): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'tools/list',
@@ -45,7 +45,7 @@ export const createToolCallRequest = (id: number, toolName: string, args: Record
 });
 
 // Resources list request
-export const createResourcesListRequest = (id: number = 4): JsonRpcMessage => ({
+export const createResourcesListRequest = (id = 4): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'resources/list',
@@ -62,21 +62,21 @@ export const createResourceReadRequest = (id: number, uri: string): JsonRpcMessa
 });
 
 // Resource templates list request
-export const createResourceTemplatesListRequest = (id: number = 10): JsonRpcMessage => ({
+export const createResourceTemplatesListRequest = (id = 10): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'resources/templates/list',
 });
 
 // Ping request
-export const createPingRequest = (id: number = 11): JsonRpcMessage => ({
+export const createPingRequest = (id = 11): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'ping',
 });
 
 // Prompts list request
-export const createPromptsListRequest = (id: number = 14): JsonRpcMessage => ({
+export const createPromptsListRequest = (id = 14): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'prompts/list',
@@ -94,7 +94,7 @@ export const createPromptGetRequest = (id: number, name: string, args: Record<st
 });
 
 // Invalid method request for error testing
-export const createInvalidMethodRequest = (id: number = 7): JsonRpcMessage => ({
+export const createInvalidMethodRequest = (id = 7): JsonRpcMessage => ({
   jsonrpc: '2.0',
   id,
   method: 'invalid/method',

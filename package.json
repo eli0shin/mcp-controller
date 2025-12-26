@@ -25,16 +25,16 @@
     "prepublish": "bun test && bun run build"
   },
   "devDependencies": {
-    "@eslint/js": "^9.15.0",
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.9.0",
     "bun-types": "^1.1.34",
     "eslint": "^9.15.0",
-    "eslint-plugin-import-x": "^4.4.2",
-    "globals": "^15.12.0",
+    "eslint-for-ai": "^1.0.8",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.14.0",
     "zod": "^3.23.8"
   },
   "keywords": [
