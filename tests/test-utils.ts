@@ -20,34 +20,42 @@ type JsonRpcResponse = {
 
 function isJsonRpcResponse(value: unknown): value is JsonRpcResponse {
   if (typeof value !== 'object' || value === null) return false;
-  return 'jsonrpc' in value && typeof value.jsonrpc === 'string' &&
-         'id' in value && typeof value.id === 'number';
+  return (
+    'jsonrpc' in value &&
+    typeof value.jsonrpc === 'string' &&
+    'id' in value &&
+    typeof value.id === 'number'
+  );
 }
 
 const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
-const controllerExecutable = path.resolve('./mcp-controller');
+const controllerExecutable = path.resolve('./bin/mcp-controller');
 
 // Helper function to manage MCP Commander process lifecycle
 export async function withMcpCommander<T>(
   args: string[],
-  callback: (sendJsonRpcMessage: (message: JsonRpcMessage) => Promise<JsonRpcResponse>, sendNotification: (message: JsonRpcMessage) => Promise<void>) => Promise<T>
+  callback: (
+    sendJsonRpcMessage: (message: JsonRpcMessage) => Promise<JsonRpcResponse>,
+    sendNotification: (message: JsonRpcMessage) => Promise<void>
+  ) => Promise<T>
 ): Promise<T> {
-  const proxyProcess = Bun.spawn([
-    controllerExecutable,
-    ...args,
-    'bun', 'run', fixtureServerPath
-  ], {
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  
+  const proxyProcess = Bun.spawn(
+    [controllerExecutable, ...args, 'bun', 'run', fixtureServerPath],
+    {
+      stdin: 'pipe',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
+
   try {
     // Give the proxy time to start
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Helper function to send JSON-RPC message and get response
-    async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
+    async function sendJsonRpcMessage(
+      message: JsonRpcMessage
+    ): Promise<JsonRpcResponse> {
       const messageStr = JSON.stringify(message) + '\n';
 
       // Write to stdin (FileSink in Bun)

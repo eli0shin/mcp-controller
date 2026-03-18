@@ -1,0 +1,56 @@
+#!/bin/sh
+set -e
+
+if [ -n "$MCP_CONTROLLER_BIN_PATH" ]; then
+    resolved="$MCP_CONTROLLER_BIN_PATH"
+else
+    script_path="$0"
+    while [ -L "$script_path" ]; do
+        link_target="$(readlink "$script_path")"
+        case "$link_target" in
+            /*) script_path="$link_target" ;;
+            *) script_path="$(dirname "$script_path")/$link_target" ;;
+        esac
+    done
+    script_dir="$(dirname "$script_path")"
+    script_dir="$(cd "$script_dir" && pwd)"
+
+    case "$(uname -s)" in
+        Darwin) platform="darwin" ;;
+        Linux) platform="linux" ;;
+        *) platform="$(uname -s | tr '[:upper:]' '[:lower:]')" ;;
+    esac
+
+    case "$(uname -m)" in
+        x86_64|amd64) arch="x64" ;;
+        aarch64|arm64) arch="arm64" ;;
+        *) arch="$(uname -m)" ;;
+    esac
+
+    resolved=""
+
+    candidate="$script_dir/mcp-controller-downloaded"
+    if [ -f "$candidate" ]; then
+        resolved="$candidate"
+    fi
+
+    if [ -z "$resolved" ]; then
+        name="mcp-controller-${platform}-${arch}"
+        current_dir="$script_dir"
+        while [ "$current_dir" != "/" ]; do
+            candidate="$current_dir/dist/$name/bin/mcp-controller"
+            if [ -f "$candidate" ]; then
+                resolved="$candidate"
+                break
+            fi
+            current_dir="$(dirname "$current_dir")"
+        done
+    fi
+
+    if [ -z "$resolved" ]; then
+        printf "Failed to find mcp-controller binary for your platform\n" >&2
+        exit 1
+    fi
+fi
+
+exec "$resolved" "$@"
