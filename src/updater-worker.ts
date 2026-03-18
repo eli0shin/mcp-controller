@@ -17,13 +17,13 @@ export type WorkerDeps = {
   getUpdateStatePath: typeof getUpdateStatePath;
 };
 
-const defaultDeps: WorkerDeps = {
+const defaultDeps = {
   fetchLatestVersion,
   downloadBinary,
   replaceBinary,
   writeUpdateState,
   getUpdateStatePath,
-};
+} satisfies WorkerDeps;
 
 export async function runUpdaterWorker(
   deps: WorkerDeps = defaultDeps
