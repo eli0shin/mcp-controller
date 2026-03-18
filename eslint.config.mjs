@@ -7,7 +7,7 @@ export default [
       'import-x/resolver': {
         typescript: true,
       },
-      'import-x/core-modules': ['bun:test'],
+      'import-x/core-modules': ['bun', 'bun:test'],
     },
     rules: {
       'for-ai/no-standalone-class': 'off',

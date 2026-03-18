@@ -3,7 +3,7 @@ node_modules/
 bun.lockb
 
 # Build output
-mcp-controller
+dist/
 
 # TypeScript
 *.tsbuildinfo
@@ -39,3 +39,8 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Update state
+.mcp-controller-update-state
+bin/mcp-controller-downloaded
+bin/mcp-controller-downloaded.exe

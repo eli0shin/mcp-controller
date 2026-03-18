@@ -11,7 +11,7 @@ const InitializeResponseSchema = JSONRPCResponseSchema.extend({
   result: InitializeResultSchema,
 });
 
-const controllerExecutable = path.resolve('./mcp-controller');
+const controllerExecutable = path.resolve('./bin/mcp-controller');
 
 describe('Bunx Integration Tests', () => {
   test('should work with npm package @modelcontextprotocol/server-sequential-thinking', async () => {

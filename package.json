@@ -3,17 +3,23 @@
   "version": "0.4.0",
   "description": "MCP server proxy that enables controlling availability of tools.",
   "type": "module",
+  "main": "src/cli.ts",
   "bin": {
-    "mcp-controller": "mcp-controller"
+    "mcp-controller": "./bin/mcp-controller"
   },
   "files": [
-    "README.md",
-    "package.json",
-    "bun.lock",
-    "mcp-controller"
+    "bin/",
+    "script/preinstall.mjs",
+    "script/postinstall.mjs",
+    "README.md"
   ],
+  "bugs": {
+    "url": "https://github.com/eli0shin/mcp-controller/issues"
+  },
+  "homepage": "https://github.com/eli0shin/mcp-controller#readme",
   "scripts": {
-    "build": "bun build src/cli.ts --compile --outfile mcp-controller",
+    "build": "./script/build.ts",
+    "release": "./script/release.ts",
     "dev": "bun run src/cli.ts",
     "typecheck": "bun tsc --noEmit",
     "lint": "eslint .",
@@ -22,18 +28,24 @@
     "format:fix": "prettier --write .",
     "test": "bun test",
     "test:watch": "bun test tests/ --watch",
-    "prepublish": "bun test && bun run build"
+    "version": "bunx changeset version",
+    "preinstall": "node ./script/preinstall.mjs",
+    "postinstall": "node ./script/postinstall.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.2",
     "@changesets/cli": "^2.29.8",
+    "@commander-js/extra-typings": "^14.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.9.0",
+    "@types/semver": "^7.7.1",
     "bun-types": "^1.1.34",
+    "commander": "^14.0.1",
     "eslint": "^9.15.0",
     "eslint-for-ai": "^1.0.8",
     "prettier": "^3.3.3",
+    "semver": "^7.7.4",
     "typescript": "^5.6.3",
     "zod": "^3.23.8"
   },

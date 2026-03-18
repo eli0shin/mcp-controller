@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run type checking
+        run: bun run typecheck
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Build release binaries
+        run: bun run build
+
+      - name: Make executables runnable
+        run: |
+          chmod +x ./bin/mcp-controller
+          chmod +x ./dist/mcp-controller-linux-x64/bin/mcp-controller
+
+      - name: Verify CLI wrapper works
+        run: ./bin/mcp-controller || [ $? -eq 1 ]
+
+      - name: Run tests
+        run: bun run test

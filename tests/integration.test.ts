@@ -9,12 +9,16 @@ import {
   ListResourcesResultSchema,
   ReadResourceResultSchema,
   ListPromptsResultSchema,
-  GetPromptResultSchema
+  GetPromptResultSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { withMcpCommander, type JsonRpcMessage, type JsonRpcResponse } from './test-utils.js';
-import { 
-  createInitializeRequest, 
-  createInitializedNotification, 
+import {
+  withMcpCommander,
+  type JsonRpcMessage,
+  type JsonRpcResponse,
+} from './test-utils.js';
+import {
+  createInitializeRequest,
+  createInitializedNotification,
   createToolsListRequest,
   createToolCallRequest,
   createResourcesListRequest,
@@ -23,66 +27,73 @@ import {
   createPingRequest,
   createPromptsListRequest,
   createPromptGetRequest,
-  createInvalidMethodRequest
+  createInvalidMethodRequest,
 } from './test-messages.js';
 
 // Complete response schemas using MCP SDK types
 const InitializeResponseSchema = JSONRPCResponseSchema.extend({
-  result: InitializeResultSchema
+  result: InitializeResultSchema,
 });
 
 const ToolsListResponseSchema = JSONRPCResponseSchema.extend({
-  result: ListToolsResultSchema
+  result: ListToolsResultSchema,
 });
 
 const ToolCallResponseSchema = JSONRPCResponseSchema.extend({
-  result: CallToolResultSchema
+  result: CallToolResultSchema,
 });
 
 const ResourcesListResponseSchema = JSONRPCResponseSchema.extend({
-  result: ListResourcesResultSchema
+  result: ListResourcesResultSchema,
 });
 
 const ResourceReadResponseSchema = JSONRPCResponseSchema.extend({
-  result: ReadResourceResultSchema
+  result: ReadResourceResultSchema,
 });
 
 const PromptsListResponseSchema = JSONRPCResponseSchema.extend({
-  result: ListPromptsResultSchema
+  result: ListPromptsResultSchema,
 });
 
 const PromptGetResponseSchema = JSONRPCResponseSchema.extend({
-  result: GetPromptResultSchema
+  result: GetPromptResultSchema,
 });
 
 const ErrorResponseSchema = JSONRPCErrorSchema;
 
-
 describe('MCP Proxy Integration Tests', () => {
-  let proxyProcess: Bun.Subprocess<"pipe", "pipe", "pipe">;
-  
+  let proxyProcess: Bun.Subprocess<'pipe', 'pipe', 'pipe'>;
+
   const fixtureServerPath = path.resolve('./tests/fixtures/mcp-server.ts');
-  const controllerExecutable = path.resolve('./mcp-controller');
-  
+  const controllerExecutable = path.resolve('./bin/mcp-controller');
+
   beforeAll(async () => {
     // Start proxy executable as a subprocess so we can communicate with it via stdio
     // Pass test arguments to the fixture server (both positional and named)
-    proxyProcess = Bun.spawn([
-      controllerExecutable,
-      'bun', 'run', fixtureServerPath, 
-      'test-arg-1', 'test-arg-2', 
-      '--named-1', 'test-named-1-value', 
-      '--named-2', 'test-named-2-value'
-    ], {
-      stdin: 'pipe',
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    
+    proxyProcess = Bun.spawn(
+      [
+        controllerExecutable,
+        'bun',
+        'run',
+        fixtureServerPath,
+        'test-arg-1',
+        'test-arg-2',
+        '--named-1',
+        'test-named-1-value',
+        '--named-2',
+        'test-named-2-value',
+      ],
+      {
+        stdin: 'pipe',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      }
+    );
+
     // Give the proxy time to start
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
-  
+
   afterAll(async () => {
     proxyProcess.kill();
     await proxyProcess.exited;
@@ -90,12 +101,18 @@ describe('MCP Proxy Integration Tests', () => {
 
   function isJsonRpcResponse(value: unknown): value is JsonRpcResponse {
     if (typeof value !== 'object' || value === null) return false;
-    return 'jsonrpc' in value && typeof value.jsonrpc === 'string' &&
-           'id' in value && typeof value.id === 'number';
+    return (
+      'jsonrpc' in value &&
+      typeof value.jsonrpc === 'string' &&
+      'id' in value &&
+      typeof value.id === 'number'
+    );
   }
 
   // Helper function to send JSON-RPC message and get response
-  async function sendJsonRpcMessage(message: JsonRpcMessage): Promise<JsonRpcResponse> {
+  async function sendJsonRpcMessage(
+    message: JsonRpcMessage
+  ): Promise<JsonRpcResponse> {
     const messageStr = JSON.stringify(message) + '\n';
 
     // Type narrowing for Bun.Subprocess - TypeScript needs these checks even though ESLint thinks they're unnecessary
@@ -147,7 +164,7 @@ describe('MCP Proxy Integration Tests', () => {
     const initRequest = createInitializeRequest();
 
     const response = await sendJsonRpcMessage(initRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = InitializeResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -183,14 +200,14 @@ describe('MCP Proxy Integration Tests', () => {
     await sendNotification(initNotification);
 
     // Give it time to process
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   test('should list tools through proxy', async () => {
     const toolsRequest = createToolsListRequest();
 
     const response = await sendJsonRpcMessage(toolsRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = ToolsListResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -239,7 +256,8 @@ describe('MCP Proxy Integration Tests', () => {
           {
             name: 'get-args',
             title: 'Get Arguments Tool',
-            description: 'Returns the command line arguments passed to the server',
+            description:
+              'Returns the command line arguments passed to the server',
             inputSchema: {
               $schema: 'http://json-schema.org/draft-07/schema#',
               additionalProperties: false,
@@ -256,7 +274,7 @@ describe('MCP Proxy Integration Tests', () => {
     const toolCallRequest = createToolCallRequest(3, 'add', { a: 5, b: 3 });
 
     const response = await sendJsonRpcMessage(toolCallRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = ToolCallResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -277,7 +295,7 @@ describe('MCP Proxy Integration Tests', () => {
     const argsRequest = createToolCallRequest(13, 'get-args');
 
     const response = await sendJsonRpcMessage(argsRequest);
-    
+
     // Validate entire response structure including both positional and named arguments
     const validatedResponse = ToolCallResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -298,7 +316,7 @@ describe('MCP Proxy Integration Tests', () => {
     const resourcesRequest = createResourcesListRequest();
 
     const response = await sendJsonRpcMessage(resourcesRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = ResourcesListResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -318,10 +336,13 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should read resources through proxy', async () => {
-    const resourceReadRequest = createResourceReadRequest(5, 'greeting://world');
+    const resourceReadRequest = createResourceReadRequest(
+      5,
+      'greeting://world'
+    );
 
     const response = await sendJsonRpcMessage(resourceReadRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = ResourceReadResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -342,7 +363,7 @@ describe('MCP Proxy Integration Tests', () => {
     const invalidToolRequest = createToolCallRequest(6, 'nonexistent-tool');
 
     const response = await sendJsonRpcMessage(invalidToolRequest);
-    
+
     // Validate entire error response structure
     const validatedResponse = ErrorResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -359,7 +380,7 @@ describe('MCP Proxy Integration Tests', () => {
     const invalidRequest = createInvalidMethodRequest(7);
 
     const response = await sendJsonRpcMessage(invalidRequest);
-    
+
     // Validate entire error response structure
     const validatedResponse = ErrorResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -373,10 +394,13 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should handle tool call with invalid arguments', async () => {
-    const invalidArgsRequest = createToolCallRequest(8, 'add', { a: 'not-a-number', b: 3 });
+    const invalidArgsRequest = createToolCallRequest(8, 'add', {
+      a: 'not-a-number',
+      b: 3,
+    });
 
     const response = await sendJsonRpcMessage(invalidArgsRequest);
-    
+
     // Validate entire error response structure
     const validatedResponse = ErrorResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -384,7 +408,8 @@ describe('MCP Proxy Integration Tests', () => {
       id: 8,
       error: {
         code: -32602,
-        message: 'MCP error -32602: Invalid arguments for tool add: [\n  {\n    "code": "invalid_type",\n    "expected": "number",\n    "received": "string",\n    "path": [\n      "a"\n    ],\n    "message": "Expected number, received string"\n  }\n]',
+        message:
+          'MCP error -32602: Invalid arguments for tool add: [\n  {\n    "code": "invalid_type",\n    "expected": "number",\n    "received": "string",\n    "path": [\n      "a"\n    ],\n    "message": "Expected number, received string"\n  }\n]',
       },
     });
   });
@@ -393,7 +418,7 @@ describe('MCP Proxy Integration Tests', () => {
     const invalidUriRequest = createResourceReadRequest(9, 'invalid://uri');
 
     const response = await sendJsonRpcMessage(invalidUriRequest);
-    
+
     // Validate entire error response structure
     const validatedResponse = ErrorResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -410,7 +435,7 @@ describe('MCP Proxy Integration Tests', () => {
     const resourceTemplatesRequest = createResourceTemplatesListRequest();
 
     const response = await sendJsonRpcMessage(resourceTemplatesRequest);
-    
+
     // Validate entire response structure
     expect(response).toEqual({
       jsonrpc: '2.0',
@@ -432,7 +457,7 @@ describe('MCP Proxy Integration Tests', () => {
     const pingRequest = createPingRequest();
 
     const response = await sendJsonRpcMessage(pingRequest);
-    
+
     // Validate entire response structure
     expect(response).toEqual({
       jsonrpc: '2.0',
@@ -445,7 +470,7 @@ describe('MCP Proxy Integration Tests', () => {
     const initRequest = createInitializeRequest(12);
 
     const response = await sendJsonRpcMessage(initRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = InitializeResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -477,7 +502,7 @@ describe('MCP Proxy Integration Tests', () => {
     const promptsRequest = createPromptsListRequest();
 
     const response = await sendJsonRpcMessage(promptsRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = PromptsListResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -502,10 +527,12 @@ describe('MCP Proxy Integration Tests', () => {
   });
 
   test('should get prompt with arguments through proxy', async () => {
-    const promptGetRequest = createPromptGetRequest(15, 'generate-greeting', { name: 'Alice' });
+    const promptGetRequest = createPromptGetRequest(15, 'generate-greeting', {
+      name: 'Alice',
+    });
 
     const response = await sendJsonRpcMessage(promptGetRequest);
-    
+
     // Validate entire response structure
     const validatedResponse = PromptGetResponseSchema.parse(response);
     expect(validatedResponse).toEqual({
@@ -527,105 +554,110 @@ describe('MCP Proxy Integration Tests', () => {
 });
 
 describe('MCP Proxy Tool Filtering Tests', () => {
-
   describe('enabled tools filtering', () => {
     test('should only return enabled tools in tools/list response', async () => {
-      await withMcpCommander(['--enabled-tools', 'add'], async (sendJsonRpcMessage, sendNotification) => {
-        // Initialize the connection
-        const initRequest = createInitializeRequest();
-        await sendJsonRpcMessage(initRequest);
-        
-        const initNotification = createInitializedNotification();
-        await sendNotification(initNotification);
+      await withMcpCommander(
+        ['--enabled-tools', 'add'],
+        async (sendJsonRpcMessage, sendNotification) => {
+          // Initialize the connection
+          const initRequest = createInitializeRequest();
+          await sendJsonRpcMessage(initRequest);
 
-        const toolsRequest = createToolsListRequest();
+          const initNotification = createInitializedNotification();
+          await sendNotification(initNotification);
 
-        const response = await sendJsonRpcMessage(toolsRequest);
-        
-        // Validate entire response structure with only 'add' tool (filtering working correctly)
-        const validatedResponse = ToolsListResponseSchema.parse(response);
-        expect(validatedResponse).toEqual({
-          jsonrpc: '2.0',
-          id: 2,
-          result: {
-            tools: [
-              {
-                name: 'add',
-                title: 'Addition Tool', 
-                description: 'Add two numbers',
-                inputSchema: {
-                  $schema: 'http://json-schema.org/draft-07/schema#',
-                  additionalProperties: false,
-                  properties: {
-                    a: { type: 'number' },
-                    b: { type: 'number' },
+          const toolsRequest = createToolsListRequest();
+
+          const response = await sendJsonRpcMessage(toolsRequest);
+
+          // Validate entire response structure with only 'add' tool (filtering working correctly)
+          const validatedResponse = ToolsListResponseSchema.parse(response);
+          expect(validatedResponse).toEqual({
+            jsonrpc: '2.0',
+            id: 2,
+            result: {
+              tools: [
+                {
+                  name: 'add',
+                  title: 'Addition Tool',
+                  description: 'Add two numbers',
+                  inputSchema: {
+                    $schema: 'http://json-schema.org/draft-07/schema#',
+                    additionalProperties: false,
+                    properties: {
+                      a: { type: 'number' },
+                      b: { type: 'number' },
+                    },
+                    required: ['a', 'b'],
+                    type: 'object',
                   },
-                  required: ['a', 'b'],
-                  type: 'object',
                 },
-              },
-            ],
-          },
-        });
-      });
+              ],
+            },
+          });
+        }
+      );
     });
   });
 
   describe('disabled tools filtering', () => {
     test('should exclude disabled tools from tools/list response', async () => {
-      await withMcpCommander(['--disabled-tools', 'get-args'], async (sendJsonRpcMessage, sendNotification) => {
-        // Initialize the connection
-        const initRequest = createInitializeRequest();
-        await sendJsonRpcMessage(initRequest);
-        
-        const initNotification = createInitializedNotification();
-        await sendNotification(initNotification);
+      await withMcpCommander(
+        ['--disabled-tools', 'get-args'],
+        async (sendJsonRpcMessage, sendNotification) => {
+          // Initialize the connection
+          const initRequest = createInitializeRequest();
+          await sendJsonRpcMessage(initRequest);
 
-        const toolsRequest = createToolsListRequest();
+          const initNotification = createInitializedNotification();
+          await sendNotification(initNotification);
 
-        const response = await sendJsonRpcMessage(toolsRequest);
-        
-        // Validate entire response structure excluding 'get-args' tool (filtering working correctly)
-        const validatedResponse = ToolsListResponseSchema.parse(response);
-        expect(validatedResponse).toEqual({
-          jsonrpc: '2.0',
-          id: 2,
-          result: {
-            tools: [
-              {
-                name: 'add',
-                title: 'Addition Tool',
-                description: 'Add two numbers',
-                inputSchema: {
-                  $schema: 'http://json-schema.org/draft-07/schema#',
-                  additionalProperties: false,
-                  properties: {
-                    a: { type: 'number' },
-                    b: { type: 'number' },
+          const toolsRequest = createToolsListRequest();
+
+          const response = await sendJsonRpcMessage(toolsRequest);
+
+          // Validate entire response structure excluding 'get-args' tool (filtering working correctly)
+          const validatedResponse = ToolsListResponseSchema.parse(response);
+          expect(validatedResponse).toEqual({
+            jsonrpc: '2.0',
+            id: 2,
+            result: {
+              tools: [
+                {
+                  name: 'add',
+                  title: 'Addition Tool',
+                  description: 'Add two numbers',
+                  inputSchema: {
+                    $schema: 'http://json-schema.org/draft-07/schema#',
+                    additionalProperties: false,
+                    properties: {
+                      a: { type: 'number' },
+                      b: { type: 'number' },
+                    },
+                    required: ['a', 'b'],
+                    type: 'object',
                   },
-                  required: ['a', 'b'],
-                  type: 'object',
                 },
-              },
-              {
-                name: 'subtract',
-                title: 'Subtraction Tool',
-                description: 'Subtract two numbers',
-                inputSchema: {
-                  $schema: 'http://json-schema.org/draft-07/schema#',
-                  additionalProperties: false,
-                  properties: {
-                    a: { type: 'number' },
-                    b: { type: 'number' },
+                {
+                  name: 'subtract',
+                  title: 'Subtraction Tool',
+                  description: 'Subtract two numbers',
+                  inputSchema: {
+                    $schema: 'http://json-schema.org/draft-07/schema#',
+                    additionalProperties: false,
+                    properties: {
+                      a: { type: 'number' },
+                      b: { type: 'number' },
+                    },
+                    required: ['a', 'b'],
+                    type: 'object',
                   },
-                  required: ['a', 'b'],
-                  type: 'object',
                 },
-              },
-            ],
-          },
-        });
-      });
+              ],
+            },
+          });
+        }
+      );
     });
   });
 });
